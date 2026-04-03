@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>IMPAVID HOTEL — Gestion</title>
+  <style>@media print{head,title{display:none!important}}</style>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -195,7 +196,7 @@ function SignatureBlock({showCachet=true}){
         <p style={{fontSize:8,color:"#a09080",marginBottom:10,fontStyle:"italic"}}>Pour IMPAVID HOTEL — SHST</p>
         {showCachet?(
           <div style={{display:"flex",justifyContent:"center",marginBottom:6}}>
-            <img src={CACHET_IMG} alt="Cachet" style={{width:110,height:110,objectFit:"contain",mixBlendMode:"multiply"}}/>
+            <img src={CACHET_IMG} alt="Cachet" style={{width:150,height:150,objectFit:"contain",mixBlendMode:"multiply"}}/>
           </div>
         ):(
           <div style={{border:"1.5px dashed #c0a870",borderRadius:8,height:70,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:6,background:"#fdfbf7"}}>
@@ -376,14 +377,14 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                   <div style={{textAlign:"right"}}>
                     <p style={{fontSize:10,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:1,marginBottom:3}}>{f.type==="devis"?"Devis N°":"Facture N°"}</p>
                     <p style={{fontSize:20,fontWeight:800,color:"#2c2416"}}>{f.numero}</p>
-                    <p style={{fontSize:11,color:"#8a7a65",marginTop:4}}>Date : {new Date(f.created_at).toLocaleDateString("fr-FR")}</p>
+                    <p style={{fontSize:11,color:"#555",marginTop:4}}>Date : {new Date(f.created_at).toLocaleDateString("fr-FR")}</p>
                   </div>
                 </div>
 
                 {/* Client */}
                 {f.client&&(
-                  <div style={{marginBottom:14,background:"#faf8f5",borderRadius:6,padding:"10px 14px",border:"1px solid #e0d8cc"}}>
-                    <p style={{fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Facturé à</p>
+                  <div style={{marginBottom:14,background:"#fff",borderRadius:6,padding:"10px 14px",border:"1px solid #ccc"}}>
+                    <p style={{fontSize:9,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Facturé à</p>
                     <p style={{fontSize:15,fontWeight:600,color:"#2c2416"}}>{f.client}</p>
                     {f.mf&&<p style={{fontSize:11,color:"#6a5a45",fontWeight:600}}>MF : {f.mf}</p>}
                     {f.cin&&<p style={{fontSize:11,color:"#6a5a45"}}>CIN : {f.cin}</p>}
@@ -395,16 +396,16 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                 {/* Lignes */}
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:16}}>
                   <thead>
-                    <tr style={{background:"#faf8f5",borderBottom:"2px solid #e0d8cc"}}>
+                    <tr style={{background:"#f5f5f5",borderBottom:"2px solid #333"}}>
                       {["Réf.","Désignation","Qté","P.U. HT","P.U. TTC","Total HT","Total TTC"].map((h,i)=>(
-                        <th key={i} style={{textAlign:i>=3?"right":"left",padding:"9px 8px",fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase"}}>{h}</th>
+                        <th key={i} style={{textAlign:i>=3?"right":"left",padding:"9px 8px",fontSize:9,fontWeight:700,color:"#555",textTransform:"uppercase"}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {lines.filter(l=>l.desc||l.code).map((l,i)=>(
-                      <tr key={i} style={{borderBottom:"1px solid #f0ebe3"}}>
-                        <td style={{padding:"10px 8px",fontSize:10,color:"#8a7040"}}>{l.code==="AUTRE"?"":l.code||""}</td>
+                      <tr key={i} style={{borderBottom:"1px solid #eee"}}>
+                        <td style={{padding:"10px 8px",fontSize:10,color:"#555"}}>{l.code==="AUTRE"?"":l.code||""}</td>
                         <td style={{padding:"10px 8px",fontWeight:500,color:"#2c2416"}}>{l.desc||""}</td>
                         <td style={{padding:"10px 8px",textAlign:"right"}}>{l.qty}</td>
                         <td style={{padding:"10px 8px",textAlign:"right",color:"#6a5a45"}}>{l.prixHT.toFixed(3)}</td>
@@ -418,7 +419,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
 
                 {/* Totaux */}
                 <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
-                  <table style={{fontSize:11,borderCollapse:"collapse",minWidth:280,border:"1px solid #e0d8cc",borderRadius:8,overflow:"hidden"}}>
+                  <table style={{fontSize:11,borderCollapse:"collapse",minWidth:280,border:"1px solid #ccc",borderRadius:8,overflow:"hidden"}}>
                     <tbody>
                       <tr style={{borderBottom:"1px solid #e0d8cc",background:"#faf8f5"}}><td style={{padding:"8px 16px",color:"#6a5a45"}}>Total HT</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600,color:"#6a5a45",minWidth:130}}>{(f.montant_ht||0).toFixed(3)} TND</td></tr>
                       <tr style={{borderBottom:"1px solid #e0d8cc",background:"#faf8f5"}}><td style={{padding:"8px 16px",color:"#6a5a45"}}>TVA (7%)</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600,color:"#6a5a45"}}>{(f.tva||0).toFixed(3)} TND</td></tr>
@@ -429,9 +430,9 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                   </table>
                 </div>
 
-                {f.notes&&<p style={{fontSize:10,color:"#6a5a45",background:"#faf8f5",padding:"8px 12px",borderRadius:6,marginBottom:12,borderLeft:"3px solid #c0a870"}}><strong>Notes :</strong> {f.notes}</p>}
-                <p style={{fontSize:9,color:"#a09080",borderTop:"1px solid #f0ebe3",paddingTop:10,marginTop:8}}>
-                  {f.type==="devis"?`Devis non contractuel, valable 30 jours — ${f.numero}`:`Arrêtée la présente facture à la somme de ${(f.montant_ttc||0).toFixed(3)} TND — MF : 1661336G`}
+                {f.notes&&<p style={{fontSize:10,color:"#333",background:"#fff",padding:"8px 12px",borderRadius:6,marginBottom:12,borderLeft:"3px solid #999"}}><strong>Notes :</strong> {f.notes}</p>}
+                <p style={{fontSize:9,color:"#333",borderTop:"1px solid #ccc",paddingTop:10,marginTop:8}}>
+                  {f.type==="devis"?`Devis non contractuel, valable 30 jours — ${f.numero}`:`Arrêtée la présente facture à la somme de : ${montantEnLettres(f.montant_ttc||0)}`}
                 </p>
                 <SignatureBlock showCachet={true}/>
               </div>
@@ -664,6 +665,43 @@ function HistoriqueView({terminees,moisDispos,G2,openDetail}){
   );
 }
 
+// Convertit un montant TND en toutes lettres (français)
+function montantEnLettres(montant){
+  const n=Math.round(montant*1000);
+  const dinars=Math.floor(n/1000);
+  const millimes=n%1000;
+  const u=['','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix','onze','douze','treize','quatorze','quinze','seize','dix-sept','dix-huit','dix-neuf'];
+  const d=['','','vingt','trente','quarante','cinquante','soixante','soixante','quatre-vingt','quatre-vingt'];
+  function dizaine(n){
+    if(n<20) return u[n];
+    const h=Math.floor(n/10),r=n%10;
+    if(h===7||h===9) return d[h]+(r===0?'':(h===7&&r===1||h===9&&r===1?'-et-':'-')+u[10+r]);
+    return d[h]+(r===0?(h===8?'s':''):(r===1&&h!==8&&h!==9?'-et-un':'-'+u[r]));
+  }
+  function centaine(n){
+    if(n===0) return '';
+    if(n<100) return dizaine(n);
+    const h=Math.floor(n/100),r=n%100;
+    const p=h===1?'cent':(u[h]+' cent')+(r===0&&h>1?'s':'');
+    return r===0?p:p+' '+dizaine(r);
+  }
+  function millier(n){
+    if(n===0) return '';
+    if(n===1) return 'mille';
+    return centaine(n)+' mille';
+  }
+  function grand(n){
+    if(n===0) return 'zéro';
+    let r='';
+    if(n>=1000){r+=millier(Math.floor(n/1000))+' ';n%=1000;}
+    if(n>0) r+=centaine(n);
+    return r.trim();
+  }
+  let res=grand(dinars)+' dinar'+(dinars>1?'s':'');
+  if(millimes>0) res+=' et '+grand(millimes)+' millime'+(millimes>1?'s':'');
+  return res.charAt(0).toUpperCase()+res.slice(1);
+}
+
 // Calcul du prix effectif d'une réservation (billingType + remise + customPrice)
 function getEffectivePrice(r){
   const room=ROOMS.find(rm=>rm.id===r.roomId);
@@ -759,7 +797,11 @@ function App(){
   }
   function doPrint(data){
     if(data) setPrintData(data);
+    // Changer le titre pour éviter qu'il apparaisse à l'impression
+    const oldTitle=document.title;
+    document.title=' ';
     setPrintReady(true);
+    setTimeout(()=>{document.title=oldTitle;},2000);
   }
   // Fermeture intelligente — annule le numéro réservé si non sauvegardé
   async function closeModal(){
@@ -962,6 +1004,7 @@ function App(){
     td:hover .cal-add{opacity:1!important}
     td:hover{background:#fef9ee!important}
     @media print{
+      *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
       #no-print{display:none!important}
       .no-print{display:none!important}
       .print-only{display:none!important}
@@ -970,7 +1013,8 @@ function App(){
       .modal{display:none!important}
       .print-a4{display:none!important}
       #print-zone{display:block!important}
-      #print-zone .print-a4{display:block!important;width:210mm;min-height:297mm;padding:18mm 16mm;box-sizing:border-box;font-family:"Inter",Arial,sans-serif;font-size:11pt;color:#000}
+      #print-zone .print-a4{display:block!important;width:210mm;min-height:297mm;padding:14mm 16mm;box-sizing:border-box;font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000}
+      @page{size:A4 portrait;margin:0}
     }
     .print-only{display:none}
     .print-a4{display:none}
@@ -2583,7 +2627,7 @@ function App(){
                   </span>
                 </div>
                 <p style={{fontSize:10,color:"#a09080",borderTop:"1px solid #f0ebe3",paddingTop:12}}>
-                  Arrêtée la présente facture à la somme de <strong>{(Math.round((totalApresRemise+1)*100)/100).toFixed(3)} TND</strong> — MF : 1661336G
+                  Arrêtée la présente facture à la somme de : <strong>{montantEnLettres(Math.round((totalApresRemise+1)*100)/100)}</strong>
                 </p>
                 <SignatureBlock/>
 
@@ -2871,7 +2915,7 @@ function App(){
                   )}
 
                   <p style={{fontSize:9,color:"#a09080",borderTop:"1px solid #f0ebe3",paddingTop:10,marginTop:8}}>
-                    Arrêtée la présente facture à la somme de <strong>{netAPayer.toFixed(3)} TND</strong> — MF : 1661336G
+                    Arrêtée la présente facture à la somme de : <strong>{montantEnLettres(netAPayer)}</strong>
                   </p>
                   <SignatureBlock showCachet={fi.showCachet!==false}/>
                 </div>
@@ -3092,7 +3136,7 @@ function App(){
 
                   {di.notes&&<p style={{fontSize:10,color:"#6a5a45",background:"#faf8f5",padding:"8px 12px",borderRadius:6,marginBottom:12,borderLeft:"3px solid #c0a870"}}><strong>Notes :</strong> {di.notes}</p>}
                   <p style={{fontSize:9,color:"#a09080",borderTop:"1px solid #f0ebe3",paddingTop:10,marginTop:8}}>
-                    Arrêtée la présente estimation à <strong>{netAPayer.toFixed(3)} TND</strong> — Devis non contractuel, valable 30 jours. MF : 1661336G
+                    Arrêtée la présente estimation à : <strong>{montantEnLettres(netAPayer)}</strong> — Devis non contractuel, valable 30 jours.
                   </p>
                   <SignatureBlock/>
                 </div>
@@ -3106,31 +3150,34 @@ function App(){
       {printData&&(
         <div id="print-zone" style={{display:"none"}}>
           <div className="print-a4">
-            <div style={{borderBottom:"2.5px solid #8B6434",paddingBottom:14,marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            {/* En-tête */}
+            <div style={{borderBottom:"2px solid #333",paddingBottom:14,marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
               <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
                 <img src={LOGO} style={{height:56,width:56,objectFit:"cover",borderRadius:8,border:"1px solid #e0d8cc"}}/>
                 <div>
                   <p style={{fontSize:11,fontWeight:700,color:"#2c2416"}}>Société Hedi pour les services touristiques — SHST</p>
-                  <p style={{fontSize:16,fontWeight:700,color:"#8B6434",letterSpacing:1}}>IMPAVID HOTEL</p>
+                  <p style={{fontSize:16,fontWeight:700,color:"#000",letterSpacing:1}}>IMPAVID HOTEL</p>
                   <p style={{fontSize:10,color:"#6a5a45"}}>Rue Jamel Abdelnasser, Gabès 6000</p>
                   <p style={{fontSize:10,color:"#6a5a45"}}>impavidhotel@gmail.com · MF : <strong>1661336G</strong> · Tél/Fax : 75 278 525</p>
                 </div>
               </div>
               <div style={{textAlign:"right"}}>
-                <p style={{fontSize:10,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:1,marginBottom:3}}>{printData.type==="devis"?"Devis N°":"Facture N°"}</p>
-                <p style={{fontSize:22,fontWeight:800,color:"#2c2416"}}>{printData.numero}</p>
+                <p style={{fontSize:10,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:1,marginBottom:3}}>{printData.type==="devis"?"Devis N°":"Facture N°"}</p>
+                <p style={{fontSize:22,fontWeight:800,color:"#000"}}>{printData.numero}</p>
                 <p style={{fontSize:11,color:"#8a7a65",marginTop:4}}>Date : {new Date(printData.created_at||Date.now()).toLocaleDateString("fr-FR")}</p>
               </div>
             </div>
+            {/* Client */}
             {printData.client&&(
               <div style={{marginBottom:14,background:"#faf8f5",borderRadius:6,padding:"10px 14px",border:"1px solid #e0d8cc"}}>
                 <p style={{fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Facturé à</p>
-                <p style={{fontSize:15,fontWeight:600,color:"#2c2416"}}>{printData.client}</p>
+                <p style={{fontSize:15,fontWeight:600,color:"#000"}}>{printData.client}</p>
                 {printData.mf&&<p style={{fontSize:11,color:"#6a5a45",fontWeight:600}}>MF : {printData.mf}</p>}
                 {printData.cin&&<p style={{fontSize:11,color:"#6a5a45"}}>CIN : {printData.cin}</p>}
                 {printData.phone&&<p style={{fontSize:11,color:"#6a5a45"}}>{printData.phone}</p>}
               </div>
             )}
+            {/* Lignes */}
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:16}}>
               <thead>
                 <tr style={{background:"#faf8f5",borderBottom:"2px solid #e0d8cc"}}>
@@ -3149,29 +3196,30 @@ function App(){
                       <td style={{padding:"10px 8px",fontSize:10,color:"#8a7040"}}>{l.code==="AUTRE"?"":l.code||""}</td>
                       <td style={{padding:"10px 8px",fontWeight:500,color:"#2c2416"}}>{l.desc||""}</td>
                       <td style={{padding:"10px 8px",textAlign:"right"}}>{qty}</td>
-                      <td style={{padding:"10px 8px",textAlign:"right",color:"#6a5a45"}}>{ht.toFixed(3)}</td>
+                      <td style={{padding:"10px 8px",textAlign:"right",color:"#555"}}>{ht.toFixed(3)}</td>
                       <td style={{padding:"10px 8px",textAlign:"right"}}>{ttc.toFixed(3)}</td>
                       <td style={{padding:"10px 8px",textAlign:"right",fontWeight:600}}>{(Math.round(qty*ht*100)/100).toFixed(3)}</td>
-                      <td style={{padding:"10px 8px",textAlign:"right",fontWeight:700,color:"#8B6434"}}>{(Math.round(qty*ttc*100)/100).toFixed(3)}</td>
+                      <td style={{padding:"10px 8px",textAlign:"right",fontWeight:700,color:"#000"}}>{(Math.round(qty*ttc*100)/100).toFixed(3)}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+            {/* Totaux */}
             <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
               <table style={{fontSize:11,borderCollapse:"collapse",minWidth:280,border:"1px solid #e0d8cc"}}>
                 <tbody>
-                  <tr style={{borderBottom:"1px solid #e0d8cc",background:"#faf8f5"}}><td style={{padding:"8px 16px",color:"#6a5a45"}}>Total HT</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600,minWidth:130}}>{(printData.montant_ht||0).toFixed(3)} TND</td></tr>
-                  <tr style={{borderBottom:"1px solid #e0d8cc",background:"#faf8f5"}}><td style={{padding:"8px 16px",color:"#6a5a45"}}>TVA (7%)</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600}}>{(printData.tva||0).toFixed(3)} TND</td></tr>
-                  {(printData.remise||0)>0&&<tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff5f5"}}><td style={{padding:"8px 16px",color:"#c95050",fontWeight:600}}>Remise ({printData.remise}%)</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:700,color:"#c95050"}}>—</td></tr>}
-                  {printData.type!=="devis"&&<tr style={{borderBottom:"1px solid #e0d8cc",background:"#faf8f5"}}><td style={{padding:"8px 16px",color:"#6a5a45"}}>Timbre fiscal</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600}}>1,000 TND</td></tr>}
-                  <tr style={{background:"#8B6434"}}><td style={{padding:"11px 16px",fontWeight:800,fontSize:13,color:"#fff"}}>{printData.type==="devis"?"Total TTC":"Net à payer"}</td><td style={{padding:"11px 16px",fontWeight:800,fontSize:16,color:"#fff",textAlign:"right"}}>{(printData.montant_ttc||0).toFixed(3)} TND</td></tr>
+                  <tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff"}}><td style={{padding:"8px 16px",color:"#555"}}>Total HT</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600,minWidth:130}}>{(printData.montant_ht||0).toFixed(3)} TND</td></tr>
+                  <tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff"}}><td style={{padding:"8px 16px",color:"#555"}}>TVA (7%)</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600}}>{(printData.tva||0).toFixed(3)} TND</td></tr>
+                  {(printData.remise||0)>0&&<tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff5f5"}}><td style={{padding:"8px 16px",color:"#c95050",fontWeight:600}}>Remise ({printData.remise}%)</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:700,color:"#c95050"}}>- {(Math.round((printData.montant_ht||0)*((printData.remise||0)/100)*100)/100).toFixed(3)} TND</td></tr>}
+                  {printData.type!=="devis"&&<tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff"}}><td style={{padding:"8px 16px",color:"#555"}}>Timbre fiscal</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600}}>1,000 TND</td></tr>}
+                  <tr style={{background:"#333"}}><td style={{padding:"11px 16px",fontWeight:800,fontSize:13,color:"#fff"}}>{printData.type==="devis"?"Total TTC":"Net à payer"}</td><td style={{padding:"11px 16px",fontWeight:800,fontSize:16,color:"#fff",textAlign:"right"}}>{(printData.montant_ttc||0).toFixed(3)} TND</td></tr>
                 </tbody>
               </table>
             </div>
             {printData.notes&&<p style={{fontSize:10,color:"#6a5a45",background:"#faf8f5",padding:"8px 12px",borderRadius:6,marginBottom:12,borderLeft:"3px solid #c0a870"}}><strong>Notes :</strong> {printData.notes}</p>}
             <p style={{fontSize:9,color:"#a09080",borderTop:"1px solid #f0ebe3",paddingTop:10,marginTop:8}}>
-              {printData.type==="devis"?`Devis non contractuel, valable 30 jours — ${printData.numero}`:`Arrêtée la présente facture à la somme de ${(printData.montant_ttc||0).toFixed(3)} TND — MF : 1661336G`}
+              {printData.type==="devis"?`Devis non contractuel, valable 30 jours — ${printData.numero}`:`Arrêtée la présente facture à la somme de : ${montantEnLettres(printData.montant_ttc||0)}`}
             </p>
             <SignatureBlock showCachet={printData.showCachet!==false}/>
           </div>
