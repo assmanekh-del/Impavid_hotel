@@ -216,7 +216,13 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
   const [loading,setLoading]=React.useState(true);
   const [search,setSearch]=React.useState("");
   const [filterType,setFilterType]=React.useState("all");
+  const [filterMois,setFilterMois]=React.useState(String(new Date().getMonth()+1).padStart(2,'0'));
+  const [filterAnnee,setFilterAnnee]=React.useState(String(new Date().getFullYear()));
   const [modalFact,setModalFact]=React.useState(null);
+
+  const MOIS=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  const anneeActuelle=new Date().getFullYear();
+  const annees=Array.from({length:5},(_,i)=>String(anneeActuelle-i));
 
   React.useEffect(()=>{
     loadFactures();
@@ -235,7 +241,10 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
     const term=search.toLowerCase().trim();
     const matchSearch=!term||(f.client||"").toLowerCase().includes(term)||(f.numero||"").toLowerCase().includes(term)||(f.mf||"").toLowerCase().includes(term)||(f.phone||"").toLowerCase().includes(term);
     const matchType=filterType==="all"||f.type===filterType;
-    return matchSearch&&matchType;
+    const d=new Date(f.created_at);
+    const matchMois=!filterMois||String(d.getMonth()+1).padStart(2,'0')===filterMois;
+    const matchAnnee=!filterAnnee||String(d.getFullYear())===filterAnnee;
+    return matchSearch&&matchType&&matchMois&&matchAnnee;
   });
 
   const totalTTC=liste.reduce((a,f)=>a+(f.montant_ttc||0),0);
@@ -252,14 +261,32 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
       </div>
 
       {/* Filtres */}
-      <div style={{background:"#fff",border:"1px solid #e8ddc8",borderRadius:10,padding:"14px 18px",display:"grid",gridTemplateColumns:"1fr auto",gap:12,marginBottom:20,boxShadow:"0 1px 4px rgba(42,30,8,0.05)"}}>
+      <div style={{background:"#fff",border:"1px solid #e8ddc8",borderRadius:10,padding:"14px 18px",display:"grid",gridTemplateColumns:"1fr 140px 140px 160px",gap:12,marginBottom:20,boxShadow:"0 1px 4px rgba(42,30,8,0.05)"}}>
         <div>
           <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>🔍 Rechercher</label>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="N° facture, client, MF, téléphone…" style={{width:"100%"}}/>
         </div>
         <div>
+          <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>Mois</label>
+          <select value={filterMois} onChange={e=>setFilterMois(e.target.value)}>
+            <option value="">Tous</option>
+            {MOIS.map((m,i)=>(
+              <option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>Année</label>
+          <select value={filterAnnee} onChange={e=>setFilterAnnee(e.target.value)}>
+            <option value="">Toutes</option>
+            {annees.map(a=>(
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+        </div>
+        <div>
           <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>Type</label>
-          <select value={filterType} onChange={e=>setFilterType(e.target.value)} style={{width:160}}>
+          <select value={filterType} onChange={e=>setFilterType(e.target.value)}>
             <option value="all">Tous</option>
             <option value="libre">Facture libre</option>
             <option value="reservation">Facture réservation</option>
@@ -1265,11 +1292,16 @@ function App(){
                 const TOMORROW=new Date(now);
                 TOMORROW.setDate(TOMORROW.getDate()+1);
                 const TOMORROW_STR=TOMORROW.toISOString().split("T")[0];
+                const YESTERDAY=new Date(now);
+                YESTERDAY.setDate(YESTERDAY.getDate()-1);
+                const YESTERDAY_STR=YESTERDAY.toISOString().split("T")[0];
                 const isPDJ=h>=6&&h<11;
+                // Pendant le service : clients dont checkout > hier (encore là ce matin)
+                // Hors service : clients dont checkout > aujourd'hui (là demain matin)
                 const resPDJ=reservations.filter(r=>
-                  ["confirmed","checkedin"].includes(r.status)&&
-                  r.checkin<=TODAY&&
-                  r.checkout>TODAY  // présents cette nuit → PDJ demain matin
+                  ["confirmed","checkedin","checkedout"].includes(r.status)&&
+                  r.checkin<=(isPDJ?TODAY:TODAY)&&
+                  r.checkout>(isPDJ?YESTERDAY_STR:TODAY)
                 );
                 const totalPersonnes=resPDJ.reduce((a,r)=>{
                   const adults=parseInt(r.adults)||1;
