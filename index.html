@@ -1215,6 +1215,7 @@ function App(){
           <button onClick={loadAll} title="Actualiser" style={{background:"none",border:"1px solid #e0d0b0",color:"#8a7040",padding:"6px 10px",borderRadius:6,fontSize:14,cursor:"pointer",fontFamily:'"Jost",sans-serif'}}>🔄</button>
           <button className="btn-outline" onClick={openFreeInvoice}>🧾 Facture libre</button>
           <button className="btn-outline" onClick={openDevis}>📋 Devis Groupe</button>
+          <button className="btn-outline" style={{background:"#fff8ee",borderColor:"#e8b84b",color:"#8a5c10"}} onClick={()=>doPrint({type:"bonsVierges"})}>🍽 Bons Restaurant</button>
           <button className="btn-gold" onClick={()=>openNew()}>+ Réservation</button>
         </header>
 
@@ -3374,167 +3375,182 @@ function App(){
       )}
 
       {/* ── ZONE D'IMPRESSION GLOBALE (hors modaux) ── */}
-      {printData&&(
-        <div id="print-zone" style={{display:"none"}}>
-          <div className="print-a4">
+      {printData&&(()=>{
+        const G2="#8B6434";
 
-          {/* ─── BON RESTAURANT ─── */}
-          {printData.type==="bonRestaurant"?(()=>{
-            const G2="#8B6434";
-            const repasLabel=printData.repas==="diner"?"Dîner":"Déjeuner";
-            const repasIcon=printData.repas==="diner"?"🌙":"🌤";
-            const dateStr=new Date(printData.date).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
-            return(
-              <div style={{
-                width:210,
-                margin:"15mm auto 0",
-                fontFamily:'"Inter",Arial,sans-serif',
-                fontSize:10,
-                border:"2px solid #c9952a",
-                borderRadius:6,
-                overflow:"hidden",
-                boxShadow:"0 2px 8px rgba(0,0,0,0.08)"
-              }}>
-                {/* ── En-tête ── */}
-                <div style={{background:"#2c2416",padding:"10px 0",textAlign:"center"}}>
-                  <img src={LOGO} alt="" style={{height:32,width:32,objectFit:"cover",borderRadius:4,border:"1px solid #c9952a",display:"block",margin:"0 auto 6px"}}/>
-                  <p style={{fontSize:11,fontWeight:800,color:"#f5d984",letterSpacing:1.5,textTransform:"uppercase",margin:0}}>IMPAVID HOTEL</p>
-                  <p style={{fontSize:7,color:"#c0a860",marginTop:2,letterSpacing:1}}>GABÈS</p>
-                </div>
-
-                {/* ── Bandeau titre ── */}
-                <div style={{background:"#c9952a",padding:"5px 0",textAlign:"center"}}>
-                  <p style={{fontSize:9,fontWeight:800,color:"#fff",letterSpacing:2,textTransform:"uppercase",margin:0}}>BON DE RESTAURANT</p>
-                </div>
-
-                {/* ── Corps ── */}
-                <div style={{padding:"10px 12px",background:"#fff"}}>
-
-                  {/* Pension */}
-                  <p style={{textAlign:"center",fontSize:8,fontWeight:700,color:"#8a5c10",textTransform:"uppercase",letterSpacing:1,marginBottom:10,borderBottom:"1px dashed #e0d0b0",paddingBottom:6}}>
-                    {printData.pension}
-                  </p>
-
-                  {/* Repas */}
-                  <div style={{textAlign:"center",background:"#fef3d0",border:"1px solid #e8c870",borderRadius:4,padding:"6px 0",marginBottom:10}}>
-                    <p style={{fontSize:14,margin:0}}>{repasIcon}</p>
-                    <p style={{fontSize:11,fontWeight:800,color:"#8a5c10",margin:"2px 0 0",letterSpacing:.5}}>{repasLabel}</p>
-                  </div>
-
-                  {/* Date */}
-                  <div style={{marginBottom:8}}>
-                    <p style={{fontSize:7,fontWeight:700,color:"#a09080",textTransform:"uppercase",letterSpacing:.8,margin:"0 0 2px"}}>Valable le</p>
-                    <p style={{fontSize:10,fontWeight:700,color:"#2c2416",margin:0}}>{dateStr}</p>
-                  </div>
-
-                  {/* Client */}
-                  <div style={{marginBottom:10,background:"#faf8f5",borderRadius:4,padding:"6px 8px",border:"1px solid #e8d8b0"}}>
-                    <p style={{fontSize:7,fontWeight:700,color:"#a09080",textTransform:"uppercase",letterSpacing:.8,margin:"0 0 2px"}}>Client</p>
-                    <p style={{fontSize:12,fontWeight:800,color:"#2c2416",margin:0}}>{printData.guest}</p>
-                  </div>
-
-                  {/* Mention */}
-                  <p style={{fontSize:7,color:"#a09080",textAlign:"center",borderTop:"1px dashed #e0d0b0",paddingTop:6,marginBottom:8}}>
-                    Bon valable pour un seul repas · Non remboursable
-                  </p>
-
-                  {/* Signature + Cachet */}
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:8}}>
-                    <div style={{flex:1,textAlign:"center"}}>
-                      <p style={{fontSize:7,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Signature</p>
-                      <div style={{borderTop:"1px solid #c0a870",height:24}}/>
-                    </div>
-                    {printData.showCachet&&(
-                      <div style={{textAlign:"center"}}>
-                        <img src={CACHET_IMG} alt="Cachet" style={{width:55,height:55,objectFit:"contain",mixBlendMode:"multiply",display:"block"}}/>
-                      </div>
-                    )}
-                  </div>
-
-                </div>
-              </div>
-            );
-          })():(
-            // ─── FACTURE / DEVIS (comportement existant) ───
-            <React.Fragment>
-            {/* En-tête */}
-            <div style={{borderBottom:"2px solid #333",paddingBottom:14,marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-              <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-                <img src={LOGO} style={{height:56,width:56,objectFit:"cover",borderRadius:8,border:"1px solid #e0d8cc"}}/>
+        // ── 8 BONS VIERGES ──
+        if(printData.type==="bonsVierges"){
+          const BonVierge=({k})=>(
+            <div key={k} style={{width:"48%",border:"1.5px solid #c9952a",borderRadius:5,overflow:"hidden",fontFamily:'"Inter",Arial,sans-serif',fontSize:9,pageBreakInside:"avoid"}}>
+              <div style={{background:"#2c2416",padding:"7px 0",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                <img src={LOGO} alt="" style={{height:22,width:22,objectFit:"cover",borderRadius:3,border:"1px solid #c9952a"}}/>
                 <div>
-                  <p style={{fontSize:11,fontWeight:700,color:"#2c2416"}}>Société Hedi pour les services touristiques — SHST</p>
-                  <p style={{fontSize:16,fontWeight:700,color:"#000",letterSpacing:1}}>IMPAVID HOTEL</p>
-                  <p style={{fontSize:10,color:"#6a5a45"}}>Rue Jamel Abdelnasser, Gabès 6000</p>
-                  <p style={{fontSize:10,color:"#6a5a45"}}>impavidhotel@gmail.com · MF : <strong>1661336G</strong> · Tél/Fax : 75 220 856</p>
+                  <p style={{fontSize:10,fontWeight:800,color:"#f5d984",letterSpacing:1.5,textTransform:"uppercase",margin:0}}>IMPAVID HOTEL</p>
+                  <p style={{fontSize:7,color:"#c0a860",margin:0,letterSpacing:1}}>BON DE RESTAURANT</p>
                 </div>
               </div>
-              <div style={{textAlign:"right"}}>
-                <p style={{fontSize:10,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:1,marginBottom:3}}>{printData.type==="devis"?"Devis N°":"Facture N°"}</p>
-                <p style={{fontSize:22,fontWeight:800,color:"#000"}}>{printData.numero}</p>
-                <p style={{fontSize:11,color:"#8a7a65",marginTop:4}}>Date : {new Date(printData.created_at||Date.now()).toLocaleDateString("fr-FR")}</p>
+              <div style={{background:"#c9952a",padding:"3px 0",textAlign:"center"}}>
+                <p style={{fontSize:8,fontWeight:700,color:"#fff",letterSpacing:1,textTransform:"uppercase",margin:0}}>DP — DEMI PENSION</p>
+              </div>
+              <div style={{padding:"8px 10px",background:"#fff"}}>
+                <div style={{display:"flex",gap:6,marginBottom:7}}>
+                  {["🌤 Déjeuner","🌙 Dîner"].map(r=>(
+                    <div key={r} style={{flex:1,border:"1px solid #e0d0b0",borderRadius:4,padding:"4px 0",textAlign:"center",fontSize:9,color:"#8a5c10",fontWeight:600}}>{r}</div>
+                  ))}
+                </div>
+                {["Valable le","Client","Signature"].map(lbl=>(
+                  <div key={lbl} style={{marginBottom:7}}>
+                    <p style={{fontSize:7,fontWeight:700,color:"#a09080",textTransform:"uppercase",letterSpacing:.8,margin:"0 0 2px"}}>{lbl}</p>
+                    <div style={{borderBottom:"1px solid #c0a870",height:14}}/>
+                  </div>
+                ))}
+                <div style={{display:"flex",justifyContent:"flex-end",marginTop:4}}>
+                  <div style={{width:44,height:44,border:"1px dashed #c9952a",borderRadius:3,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <p style={{fontSize:6,color:"#d0c090",textAlign:"center",margin:0}}>Cachet</p>
+                  </div>
+                </div>
+                <p style={{fontSize:6,color:"#b0a080",textAlign:"center",marginTop:4,borderTop:"1px dashed #e0d0b0",paddingTop:4}}>Valable pour un seul repas · Non remboursable</p>
               </div>
             </div>
-            {/* Client */}
-            {printData.client&&(
-              <div style={{marginBottom:14,background:"#faf8f5",borderRadius:6,padding:"10px 14px",border:"1px solid #e0d8cc"}}>
-                <p style={{fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Facturé à</p>
-                <p style={{fontSize:15,fontWeight:600,color:"#000"}}>{printData.client}</p>
-                {printData.mf&&<p style={{fontSize:11,color:"#6a5a45",fontWeight:600}}>MF : {printData.mf}</p>}
-                {printData.cin&&<p style={{fontSize:11,color:"#6a5a45"}}>CIN : {printData.cin}</p>}
-                {printData.phone&&<p style={{fontSize:11,color:"#6a5a45"}}>{printData.phone}</p>}
+          );
+          return(
+            <div id="print-zone" style={{display:"none"}}>
+              <div className="print-a4" style={{padding:"8mm"}}>
+                <div style={{display:"flex",flexWrap:"wrap",gap:"3%",rowGap:"10px"}}>
+                  {[0,1,2,3,4,5,6,7].map(i=><BonVierge key={i} k={i}/>)}
+                </div>
               </div>
-            )}
-            {/* Lignes */}
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:16}}>
-              <thead>
-                <tr style={{background:"#faf8f5",borderBottom:"2px solid #e0d8cc"}}>
-                  {["Réf.","Désignation","Qté","P.U. HT","P.U. TTC","Total HT","Total TTC"].map((h,i)=>(
-                    <th key={i} style={{textAlign:i>=3?"right":"left",padding:"9px 8px",fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase"}}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(printData.lignes||[]).filter(l=>l.desc||l.code).map((l,i)=>{
-                  const ttc=parseFloat(l.prixTTC)||0;
-                  const ht=Math.round((ttc/1.07)*1000)/1000;
-                  const qty=parseFloat(l.qty)||1;
-                  return(
-                    <tr key={i} style={{borderBottom:"1px solid #f0ebe3"}}>
-                      <td style={{padding:"10px 8px",fontSize:10,color:"#8a7040"}}>{l.code==="AUTRE"?"":l.code||""}</td>
-                      <td style={{padding:"10px 8px",fontWeight:500,color:"#2c2416"}}>{l.desc||""}</td>
-                      <td style={{padding:"10px 8px",textAlign:"right"}}>{qty}</td>
-                      <td style={{padding:"10px 8px",textAlign:"right",color:"#555"}}>{ht.toFixed(3)}</td>
-                      <td style={{padding:"10px 8px",textAlign:"right"}}>{ttc.toFixed(3)}</td>
-                      <td style={{padding:"10px 8px",textAlign:"right",fontWeight:600}}>{(Math.round(qty*ht*100)/100).toFixed(3)}</td>
-                      <td style={{padding:"10px 8px",textAlign:"right",fontWeight:700,color:"#000"}}>{(Math.round(qty*ttc*100)/100).toFixed(3)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {/* Totaux */}
-            <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
-              <table style={{fontSize:11,borderCollapse:"collapse",minWidth:280,border:"1px solid #e0d8cc"}}>
+            </div>
+          );
+        }
+
+        // ── BON RESTAURANT NOMINATIF ──
+        if(printData.type==="bonRestaurant"){
+          const repasLabel=printData.repas==="diner"?"Dîner":"Déjeuner";
+          const repasIcon=printData.repas==="diner"?"🌙":"🌤";
+          const dateStr=new Date(printData.date).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+          return(
+            <div id="print-zone" style={{display:"none"}}>
+              <div className="print-a4">
+                <div style={{width:210,margin:"15mm auto 0",fontFamily:'"Inter",Arial,sans-serif',fontSize:10,border:"2px solid #c9952a",borderRadius:6,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
+                  <div style={{background:"#2c2416",padding:"10px 0",textAlign:"center"}}>
+                    <img src={LOGO} alt="" style={{height:32,width:32,objectFit:"cover",borderRadius:4,border:"1px solid #c9952a",display:"block",margin:"0 auto 6px"}}/>
+                    <p style={{fontSize:11,fontWeight:800,color:"#f5d984",letterSpacing:1.5,textTransform:"uppercase",margin:0}}>IMPAVID HOTEL</p>
+                    <p style={{fontSize:7,color:"#c0a860",marginTop:2,letterSpacing:1}}>GABÈS</p>
+                  </div>
+                  <div style={{background:"#c9952a",padding:"5px 0",textAlign:"center"}}>
+                    <p style={{fontSize:9,fontWeight:800,color:"#fff",letterSpacing:2,textTransform:"uppercase",margin:0}}>BON DE RESTAURANT</p>
+                  </div>
+                  <div style={{padding:"10px 12px",background:"#fff"}}>
+                    <p style={{textAlign:"center",fontSize:8,fontWeight:700,color:"#8a5c10",textTransform:"uppercase",letterSpacing:1,marginBottom:10,borderBottom:"1px dashed #e0d0b0",paddingBottom:6}}>{printData.pension}</p>
+                    <div style={{textAlign:"center",background:"#fef3d0",border:"1px solid #e8c870",borderRadius:4,padding:"6px 0",marginBottom:10}}>
+                      <p style={{fontSize:14,margin:0}}>{repasIcon}</p>
+                      <p style={{fontSize:11,fontWeight:800,color:"#8a5c10",margin:"2px 0 0",letterSpacing:.5}}>{repasLabel}</p>
+                    </div>
+                    <div style={{marginBottom:8}}>
+                      <p style={{fontSize:8,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:1,margin:"0 0 2px"}}>Valable le</p>
+                      <p style={{fontSize:10,fontWeight:700,color:"#2c2416",margin:0}}>{dateStr}</p>
+                    </div>
+                    <div style={{marginBottom:10,background:"#faf8f5",borderRadius:4,padding:"6px 8px",border:"1px solid #e8d8b0"}}>
+                      <p style={{fontSize:8,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:1,margin:"0 0 2px"}}>Client</p>
+                      <p style={{fontSize:12,fontWeight:800,color:"#2c2416",margin:0}}>{printData.guest}</p>
+                    </div>
+                    <p style={{fontSize:7,color:"#a09080",textAlign:"center",borderTop:"1px dashed #e0d0b0",paddingTop:6,marginBottom:8}}>Bon valable pour un seul repas · Non remboursable</p>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:8,marginTop:10}}>
+                      <div style={{flex:1,textAlign:"center"}}>
+                        <p style={{fontSize:8,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>Signature</p>
+                        <div style={{borderTop:"1px solid #c0a870",height:24}}/>
+                      </div>
+                      {printData.showCachet&&(
+                        <div style={{textAlign:"center"}}>
+                          <img src={CACHET_IMG} alt="Cachet" style={{width:55,height:55,objectFit:"contain",mixBlendMode:"multiply",display:"block"}}/>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // ── FACTURE / DEVIS ──
+        return(
+          <div id="print-zone" style={{display:"none"}}>
+            <div className="print-a4">
+              <div style={{borderBottom:"2px solid #333",paddingBottom:14,marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+                  <img src={LOGO} style={{height:56,width:56,objectFit:"cover",borderRadius:8,border:"1px solid #e0d8cc"}}/>
+                  <div>
+                    <p style={{fontSize:11,fontWeight:700,color:"#2c2416"}}>Société Hedi pour les services touristiques — SHST</p>
+                    <p style={{fontSize:16,fontWeight:700,color:"#000",letterSpacing:1}}>IMPAVID HOTEL</p>
+                    <p style={{fontSize:10,color:"#6a5a45"}}>Rue Jamel Abdelnasser, Gabès 6000</p>
+                    <p style={{fontSize:10,color:"#6a5a45"}}>impavidhotel@gmail.com · MF : <strong>1661336G</strong> · Tél/Fax : 75 220 856</p>
+                  </div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <p style={{fontSize:10,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:1,marginBottom:3}}>{printData.type==="devis"?"Devis N°":"Facture N°"}</p>
+                  <p style={{fontSize:22,fontWeight:800,color:"#000"}}>{printData.numero}</p>
+                  <p style={{fontSize:11,color:"#8a7a65",marginTop:4}}>Date : {new Date(printData.created_at||Date.now()).toLocaleDateString("fr-FR")}</p>
+                </div>
+              </div>
+              {printData.client&&(
+                <div style={{marginBottom:14,background:"#faf8f5",borderRadius:6,padding:"10px 14px",border:"1px solid #e0d8cc"}}>
+                  <p style={{fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Facturé à</p>
+                  <p style={{fontSize:15,fontWeight:600,color:"#000"}}>{printData.client}</p>
+                  {printData.mf&&<p style={{fontSize:11,color:"#6a5a45",fontWeight:600}}>MF : {printData.mf}</p>}
+                  {printData.cin&&<p style={{fontSize:11,color:"#6a5a45"}}>CIN : {printData.cin}</p>}
+                  {printData.phone&&<p style={{fontSize:11,color:"#6a5a45"}}>{printData.phone}</p>}
+                  {printData.email&&<p style={{fontSize:11,color:"#6a5a45"}}>{printData.email}</p>}
+                </div>
+              )}
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:16}}>
+                <thead>
+                  <tr style={{background:"#faf8f5",borderBottom:"2px solid #e0d8cc"}}>
+                    {["Réf.","Désignation","Qté","P.U. HT","P.U. TTC","Total HT","Total TTC"].map((h,i)=>(
+                      <th key={i} style={{textAlign:i>=3?"right":"left",padding:"9px 8px",fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase"}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
                 <tbody>
-                  <tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff"}}><td style={{padding:"8px 16px",color:"#555"}}>Total HT</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600,minWidth:130}}>{(printData.montant_ht||0).toFixed(3)} TND</td></tr>
-                  <tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff"}}><td style={{padding:"8px 16px",color:"#555"}}>TVA (7%)</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600}}>{(printData.tva||0).toFixed(3)} TND</td></tr>
-                  {(printData.remise||0)>0&&<tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff5f5"}}><td style={{padding:"8px 16px",color:"#c95050",fontWeight:600}}>Remise ({printData.remise}%)</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:700,color:"#c95050"}}>- {(Math.round((printData.montant_ht||0)*((printData.remise||0)/100)*100)/100).toFixed(3)} TND</td></tr>}
-                  {printData.type!=="devis"&&<tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff"}}><td style={{padding:"8px 16px",color:"#555"}}>Timbre fiscal</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600}}>1,000 TND</td></tr>}
-                  <tr style={{background:"#333"}}><td style={{padding:"11px 16px",fontWeight:800,fontSize:13,color:"#fff"}}>{printData.type==="devis"?"Total TTC":"Net à payer"}</td><td style={{padding:"11px 16px",fontWeight:800,fontSize:16,color:"#fff",textAlign:"right"}}>{(printData.montant_ttc||0).toFixed(3)} TND</td></tr>
+                  {(printData.lignes||[]).filter(l=>l.desc||l.code).map((l,i)=>{
+                    const ttc=parseFloat(l.prixTTC)||0;
+                    const ht=Math.round((ttc/1.07)*1000)/1000;
+                    const qty=parseFloat(l.qty)||1;
+                    return(
+                      <tr key={i} style={{borderBottom:"1px solid #f0ebe3"}}>
+                        <td style={{padding:"10px 8px",fontSize:10,color:"#8a7040"}}>{l.code==="AUTRE"?"":l.code||""}</td>
+                        <td style={{padding:"10px 8px",fontWeight:500,color:"#2c2416"}}>{l.desc||""}</td>
+                        <td style={{padding:"10px 8px",textAlign:"right"}}>{qty}</td>
+                        <td style={{padding:"10px 8px",textAlign:"right",color:"#555"}}>{ht.toFixed(3)}</td>
+                        <td style={{padding:"10px 8px",textAlign:"right"}}>{ttc.toFixed(3)}</td>
+                        <td style={{padding:"10px 8px",textAlign:"right",fontWeight:600}}>{(Math.round(qty*ht*100)/100).toFixed(3)}</td>
+                        <td style={{padding:"10px 8px",textAlign:"right",fontWeight:700,color:"#000"}}>{(Math.round(qty*ttc*100)/100).toFixed(3)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
+                <table style={{fontSize:11,borderCollapse:"collapse",minWidth:280,border:"1px solid #e0d8cc"}}>
+                  <tbody>
+                    <tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff"}}><td style={{padding:"8px 16px",color:"#555"}}>Total HT</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600,minWidth:130}}>{(printData.montant_ht||0).toFixed(3)} TND</td></tr>
+                    <tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff"}}><td style={{padding:"8px 16px",color:"#555"}}>TVA (7%)</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600}}>{(printData.tva||0).toFixed(3)} TND</td></tr>
+                    {(printData.remise||0)>0&&<tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff5f5"}}><td style={{padding:"8px 16px",color:"#c95050",fontWeight:600}}>Remise ({printData.remise}%)</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:700,color:"#c95050"}}>- {(Math.round((printData.montant_ht||0)*((printData.remise||0)/100)*100)/100).toFixed(3)} TND</td></tr>}
+                    {printData.type!=="devis"&&<tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff"}}><td style={{padding:"8px 16px",color:"#555"}}>Timbre fiscal</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600}}>1,000 TND</td></tr>}
+                    <tr style={{background:"#333"}}><td style={{padding:"11px 16px",fontWeight:800,fontSize:13,color:"#fff"}}>{printData.type==="devis"?"Total TTC":"Net à payer"}</td><td style={{padding:"11px 16px",fontWeight:800,fontSize:16,color:"#fff",textAlign:"right"}}>{(printData.montant_ttc||0).toFixed(3)} TND</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              {printData.notes&&<p style={{fontSize:10,color:"#6a5a45",background:"#faf8f5",padding:"8px 12px",borderRadius:6,marginBottom:12,borderLeft:"3px solid #c0a870"}}><strong>Notes :</strong> {printData.notes}</p>}
+              <p style={{fontSize:9,color:"#a09080",borderTop:"1px solid #f0ebe3",paddingTop:10,marginTop:8}}>
+                {printData.type==="devis"?`Devis non contractuel, valable 30 jours — ${printData.numero}`:`Arrêtée la présente facture à la somme de : ${montantEnLettres(printData.montant_ttc||0)}`}
+              </p>
+              <SignatureBlock showCachet={printData.showCachet!==false}/>
             </div>
-            {printData.notes&&<p style={{fontSize:10,color:"#6a5a45",background:"#faf8f5",padding:"8px 12px",borderRadius:6,marginBottom:12,borderLeft:"3px solid #c0a870"}}><strong>Notes :</strong> {printData.notes}</p>}
-            <p style={{fontSize:9,color:"#a09080",borderTop:"1px solid #f0ebe3",paddingTop:10,marginTop:8}}>
-              {printData.type==="devis"?`Devis non contractuel, valable 30 jours — ${printData.numero}`:`Arrêtée la présente facture à la somme de : ${montantEnLettres(printData.montant_ttc||0)}`}
-            </p>
-            <SignatureBlock showCachet={printData.showCachet!==false}/>
-          </React.Fragment>
-          )}
           </div>
-        </div>
-      )}
-
+        );
+      })()}
       </div>{/* fin contenu principal */}
     </div>
   );
