@@ -327,118 +327,225 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
         </div>
       )}
 
-      {/* Modal réimpression */}
+      {/* Modal réimpression / édition */}
       {modalFact&&(()=>{
-        const f=modalFact;
         const G2b="#8B6434";
-        const lines=(f.lignes||[]).map(l=>{
-          const ttc=parseFloat(l.prixTTC)||0;
-          const ht=Math.round((ttc/1.07)*1000)/1000;
-          const qty=parseFloat(l.qty)||1;
-          return{...l,prixHT:ht,totalHT:Math.round(qty*ht*100)/100,totalTTC:Math.round(qty*ttc*100)/100};
-        });
-        return(
-          <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModalFact(null)}>
-            <div className="modal" style={{maxWidth:660,fontFamily:'"Inter",sans-serif'}}>
-              <div className="no-print" style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,paddingBottom:12,borderBottom:"1px solid #f0e8d8"}}>
-                <div>
-                  <p style={{fontFamily:'"Cormorant Garamond",serif',fontSize:18,fontWeight:700,color:G2b}}>📄 {f.numero}</p>
-                  <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040"}}>{f.client} · {new Date(f.created_at).toLocaleDateString("fr-FR")}</p>
-                </div>
-                <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                  <button className="btn-ghost" onClick={()=>setModalFact(null)}>Fermer</button>
-                  <button style={{fontSize:11,padding:"7px 12px",background:"#fdf0f0",border:"1.5px solid #e0a0a0",color:"#9a2020",borderRadius:6,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontWeight:600}} onClick={async()=>{
-                    if(!confirm('Supprimer la facture '+f.numero+' des archives ?\n\nCette action est irréversible.')) return;
-                    try{
-                      await sb.from('factures').delete().eq('id',f.id);
-                      const _r2=await sb.from('factures').select('*',{count:'exact',head:true}).not('numero','ilike','DEV-%');
-                      await sb.from('counters').update({val:_r2.count||0}).eq('id','invoice');
-                      setFactures(prev=>prev.filter(x=>x.id!==f.id));
-                      setModalFact(null);
-                    }catch(e){console.error(e);alert('Erreur suppression');}
-                  }}>🗑 Supprimer</button>
-                  <button className="btn-gold" onClick={()=>doPrint(f)}>🖨 Imprimer</button>
-                </div>
-              </div>
 
-              {/* ZONE IMPRESSION */}
-              <div className="print-only print-a4">
-                {/* En-tête */}
-                <div style={{borderBottom:"2.5px solid "+G2b,paddingBottom:14,marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                  <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-                    <img src={LOGO} style={{height:54,width:54,objectFit:"cover",borderRadius:8,border:"1px solid #e0d8cc"}}/>
-                    <div>
-                      <p style={{fontSize:11,fontWeight:700,color:"#2c2416"}}>Société Hedi pour les services touristiques — SHST</p>
-                      <p style={{fontSize:15,fontWeight:700,color:G2b,letterSpacing:1}}>IMPAVID HOTEL</p>
-                      <p style={{fontSize:10,color:"#6a5a45"}}>Rue Jamel Abdelnasser, Gabès 6000 · MF : 1661336G</p>
-                      <p style={{fontSize:10,color:"#6a5a45"}}>✉ impavidhotel@gmail.com · Tél/Fax : 75 278 525</p>
+        function ArchiveModal({fact}){
+          const [editMode,setEditMode]=React.useState(false);
+          const [ed,setEd]=React.useState({
+            client:fact.client||"",
+            phone:fact.phone||"",
+            email:fact.email||"",
+            mf:fact.mf||"",
+            cin:fact.cin||"",
+            notes:fact.notes||"",
+            remise:fact.remise||0,
+            lignes:(fact.lignes||[]).map(l=>({...l})),
+          });
+
+          const lines=ed.lignes.map(l=>{
+            const ttc=parseFloat(l.prixTTC)||0;
+            const ht=Math.round((ttc/1.07)*1000)/1000;
+            const qty=parseFloat(l.qty)||1;
+            return{...l,prixHT:ht,totalHT:Math.round(qty*ht*100)/100,totalTTC:Math.round(qty*ttc*100)/100};
+          });
+          const grandTTC=Math.round(lines.reduce((a,l)=>a+l.totalTTC,0)*100)/100;
+          const grandHT=Math.round(lines.reduce((a,l)=>a+l.totalHT,0)*100)/100;
+          const remiseMont=Math.round(grandTTC*((parseFloat(ed.remise)||0)/100)*100)/100;
+          const netBase=Math.round((grandTTC-remiseMont)*100)/100;
+          const netAPayer=fact.type!=="devis"?Math.round((netBase+1)*100)/100:netBase;
+          const tvaAmt=Math.round((grandTTC-grandHT)*100)/100;
+
+          async function saveEdit(){
+            const payload={
+              client:ed.client||null,
+              phone:ed.phone||null,
+              email:ed.email||null,
+              mf:ed.mf||null,
+              cin:ed.cin||null,
+              notes:ed.notes||null,
+              remise:parseFloat(ed.remise)||0,
+              lignes:ed.lignes,
+              montant_ht:grandHT,
+              tva:tvaAmt,
+              montant_ttc:netAPayer,
+            };
+            try{
+              const{error}=await sb.from('factures').update(payload).eq('id',fact.id);
+              if(error) throw error;
+              setFactures(prev=>prev.map(x=>x.id===fact.id?{...x,...payload}:x));
+              setModalFact({...fact,...payload});
+              setEditMode(false);
+            }catch(e){alert('Erreur sauvegarde : '+e.message);}
+          }
+
+          return(
+            <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModalFact(null)}>
+              <div className="modal" style={{maxWidth:680,fontFamily:'"Inter",sans-serif'}}>
+
+                {/* Barre titre */}
+                <div className="no-print" style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,paddingBottom:12,borderBottom:"1px solid #f0e8d8"}}>
+                  <div>
+                    <p style={{fontFamily:'"Cormorant Garamond",serif',fontSize:18,fontWeight:700,color:G2b}}>
+                      {editMode?"✏️ Modifier — ":"📄 "}{fact.numero}
+                    </p>
+                    <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040"}}>{fact.client} · {new Date(fact.created_at).toLocaleDateString("fr-FR")}</p>
+                  </div>
+                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                    <button className="btn-ghost" onClick={()=>setModalFact(null)}>Fermer</button>
+                    {!editMode&&<button style={{fontSize:11,padding:"7px 12px",background:"#f0f4ff",border:"1.5px solid #c0cfee",color:"#3a5fc8",borderRadius:6,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontWeight:600}} onClick={()=>setEditMode(true)}>✏️ Modifier</button>}
+                    {editMode&&<button style={{fontSize:11,padding:"7px 12px",background:"#f0faf4",border:"1.5px solid #a0d8b8",color:"#2a8a5a",borderRadius:6,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontWeight:600}} onClick={saveEdit}>💾 Enregistrer</button>}
+                    {editMode&&<button className="btn-ghost" onClick={()=>{setEditMode(false);setEd({client:fact.client||"",phone:fact.phone||"",email:fact.email||"",mf:fact.mf||"",cin:fact.cin||"",notes:fact.notes||"",remise:fact.remise||0,lignes:(fact.lignes||[]).map(l=>({...l}))});}}>Annuler</button>}
+                    {!editMode&&<button style={{fontSize:11,padding:"7px 12px",background:"#fdf0f0",border:"1.5px solid #e0a0a0",color:"#9a2020",borderRadius:6,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontWeight:600}} onClick={async()=>{
+                      if(!confirm('Supprimer '+fact.numero+' ?\n\nIrréversible.')) return;
+                      try{
+                        await sb.from('factures').delete().eq('id',fact.id);
+                        const _isD=(fact.numero||'').startsWith('DEV-');
+                        if(_isD){const _r=await sb.from('factures').select('*',{count:'exact',head:true}).like('numero','DEV-%');await sb.from('counters').update({val:_r.count||0}).eq('id','devis');}
+                        else{const _r=await sb.from('factures').select('*',{count:'exact',head:true}).not('numero','ilike','DEV-%');await sb.from('counters').update({val:_r.count||0}).eq('id','invoice');}
+                        setFactures(prev=>prev.filter(x=>x.id!==fact.id));
+                        setModalFact(null);
+                      }catch(e){alert('Erreur suppression');}
+                    }}>🗑 Supprimer</button>}
+                    {!editMode&&<button className="btn-gold" onClick={()=>doPrint({...fact,lignes:fact.lignes,showCachet:true})}>🖨 Imprimer</button>}
+                  </div>
+                </div>
+
+                {/* ── MODE ÉDITION ── */}
+                {editMode&&(
+                  <div style={{display:"grid",gap:12,marginBottom:16}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                      {[["Client","client"],["Téléphone","phone"],["Email","email"],["MF","mf"],["CIN","cin"]].map(([lbl,key])=>(
+                        <div key={key}>
+                          <label style={{display:"block",fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:3,fontFamily:'"Jost",sans-serif'}}>{lbl}</label>
+                          <input value={ed[key]} onChange={e=>setEd(x=>({...x,[key]:e.target.value}))} style={{width:"100%",fontSize:12,padding:"6px 10px"}}/>
+                        </div>
+                      ))}
+                      <div>
+                        <label style={{display:"block",fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:3,fontFamily:'"Jost",sans-serif'}}>Remise %</label>
+                        <input type="number" min="0" max="100" value={ed.remise} onChange={e=>setEd(x=>({...x,remise:e.target.value}))} style={{width:"100%",fontSize:12,padding:"6px 10px"}}/>
+                      </div>
                     </div>
-                  </div>
-                  <div style={{textAlign:"right"}}>
-                    <p style={{fontSize:10,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:1,marginBottom:3}}>{f.type==="devis"?"Devis N°":"Facture N°"}</p>
-                    <p style={{fontSize:20,fontWeight:800,color:"#2c2416"}}>{f.numero}</p>
-                    <p style={{fontSize:11,color:"#555",marginTop:4}}>Date : {new Date(f.created_at).toLocaleDateString("fr-FR")}</p>
-                  </div>
-                </div>
-
-                {/* Client */}
-                {f.client&&(
-                  <div style={{marginBottom:14,borderRadius:4,padding:"10px 14px",border:"1px solid #ccc"}}>
-                    <p style={{fontSize:9,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Facturé à</p>
-                    <p style={{fontSize:15,fontWeight:600,color:"#2c2416"}}>{f.client}</p>
-                    {f.mf&&<p style={{fontSize:11,color:"#6a5a45",fontWeight:600}}>MF : {f.mf}</p>}
-                    {f.cin&&<p style={{fontSize:11,color:"#6a5a45"}}>CIN : {f.cin}</p>}
-                    {f.phone&&<p style={{fontSize:11,color:"#6a5a45"}}>{f.phone}</p>}
-                    {f.email&&<p style={{fontSize:11,color:"#6a5a45"}}>{f.email}</p>}
+                    <div>
+                      <label style={{display:"block",fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:3,fontFamily:'"Jost",sans-serif'}}>Notes</label>
+                      <input value={ed.notes} onChange={e=>setEd(x=>({...x,notes:e.target.value}))} style={{width:"100%",fontSize:12,padding:"6px 10px"}}/>
+                    </div>
+                    {/* Lignes */}
+                    <div>
+                      <label style={{display:"block",fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:6,fontFamily:'"Jost",sans-serif'}}>Lignes</label>
+                      <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                        <thead><tr style={{background:"#faf8f5",borderBottom:"1px solid #e0d8cc"}}>
+                          {["Réf.","Désignation","Qté","P.U. TTC",""].map((h,i)=>(
+                            <th key={i} style={{padding:"6px 6px",textAlign:i>=3?"right":"left",fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase"}}>{h}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>
+                          {ed.lignes.map((l,i)=>(
+                            <tr key={i} style={{borderBottom:"1px solid #f0ebe3"}}>
+                              <td style={{padding:"4px 4px"}}><input value={l.code||""} onChange={e=>{const nl=[...ed.lignes];nl[i]={...nl[i],code:e.target.value};setEd(x=>({...x,lignes:nl}));}} style={{width:60,fontSize:11,padding:"4px 6px"}}/></td>
+                              <td style={{padding:"4px 4px"}}><input value={l.desc||""} onChange={e=>{const nl=[...ed.lignes];nl[i]={...nl[i],desc:e.target.value};setEd(x=>({...x,lignes:nl}));}} style={{width:"100%",fontSize:11,padding:"4px 6px"}}/></td>
+                              <td style={{padding:"4px 4px"}}><input type="number" value={l.qty||1} onChange={e=>{const nl=[...ed.lignes];nl[i]={...nl[i],qty:e.target.value};setEd(x=>({...x,lignes:nl}));}} style={{width:50,fontSize:11,padding:"4px 6px",textAlign:"right"}}/></td>
+                              <td style={{padding:"4px 4px"}}><input type="number" value={l.prixTTC||0} onChange={e=>{const nl=[...ed.lignes];nl[i]={...nl[i],prixTTC:e.target.value};setEd(x=>({...x,lignes:nl}));}} style={{width:80,fontSize:11,padding:"4px 6px",textAlign:"right"}}/></td>
+                              <td style={{padding:"4px 4px",textAlign:"center"}}><button onClick={()=>{const nl=ed.lignes.filter((_,j)=>j!==i);setEd(x=>({...x,lignes:nl}));}} style={{background:"#fdf0f0",border:"1px solid #e0a0a0",color:"#9a2020",borderRadius:4,padding:"2px 7px",cursor:"pointer",fontSize:12}}>×</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <button onClick={()=>setEd(x=>({...x,lignes:[...x.lignes,{code:"",desc:"",qty:1,prixTTC:0}]}))} style={{marginTop:6,fontSize:11,background:"#faf8f5",border:"1px dashed #c0b080",color:"#8a7040",padding:"4px 12px",borderRadius:5,cursor:"pointer",fontFamily:'"Jost",sans-serif'}}>+ Ligne</button>
+                    </div>
+                    {/* Aperçu total */}
+                    <div style={{display:"flex",justifyContent:"flex-end"}}>
+                      <div style={{fontFamily:'"Jost",sans-serif',fontSize:12,minWidth:240,background:"#faf8f5",borderRadius:8,padding:"10px 14px",border:"1px solid #e0d8cc"}}>
+                        {[["Total HT",grandHT.toFixed(3)+" TND"],["TVA 7%",tvaAmt.toFixed(3)+" TND"]].map(([l,v])=>(
+                          <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:4,color:"#6a5a45"}}><span>{l}</span><span style={{fontWeight:500}}>{v}</span></div>
+                        ))}
+                        {(parseFloat(ed.remise)||0)>0&&<div style={{display:"flex",justifyContent:"space-between",marginBottom:4,color:"#c95050"}}><span>Remise ({ed.remise}%)</span><span style={{fontWeight:600}}>− {remiseMont.toFixed(3)} TND</span></div>}
+                        {fact.type!=="devis"&&<div style={{display:"flex",justifyContent:"space-between",marginBottom:4,color:"#6a5a45"}}><span>Timbre fiscal</span><span style={{fontWeight:500}}>1,000 TND</span></div>}
+                        <div style={{display:"flex",justifyContent:"space-between",background:G2b,color:"#fff",padding:"7px 10px",borderRadius:5,marginTop:6,fontWeight:700}}>
+                          <span>{fact.type==="devis"?"Total TTC":"Net à payer"}</span><span>{netAPayer.toFixed(3)} TND</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                {/* Lignes */}
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:16}}>
-                  <thead>
-                    <tr style={{borderBottom:"2px solid #000"}}>
-                      {["Réf.","Désignation","Qté","P.U. HT","P.U. TTC","Total HT","Total TTC"].map((h,i)=>(
-                        <th key={i} style={{textAlign:i>=3?"right":"left",padding:"9px 8px",fontSize:9,fontWeight:700,color:"#555",textTransform:"uppercase"}}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.filter(l=>l.desc||l.code).map((l,i)=>(
-                      <tr key={i} style={{borderBottom:"1px solid #eee"}}>
-                        <td style={{padding:"10px 8px",fontSize:10,color:"#555"}}>{l.code==="AUTRE"?"":l.code||""}</td>
-                        <td style={{padding:"10px 8px",fontWeight:500,color:"#2c2416"}}>{l.desc||""}</td>
-                        <td style={{padding:"10px 8px",textAlign:"right"}}>{l.qty}</td>
-                        <td style={{padding:"10px 8px",textAlign:"right",color:"#6a5a45"}}>{l.prixHT.toFixed(3)}</td>
-                        <td style={{padding:"10px 8px",textAlign:"right"}}>{(parseFloat(l.prixTTC)||0).toFixed(3)}</td>
-                        <td style={{padding:"10px 8px",textAlign:"right",fontWeight:600}}>{l.totalHT.toFixed(3)}</td>
-                        <td style={{padding:"10px 8px",textAlign:"right",fontWeight:700,color:G2b}}>{l.totalTTC.toFixed(3)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {/* ── MODE APERÇU (impression) ── */}
+                {!editMode&&(
+                  <div className="print-only print-a4">
+                    <div style={{borderBottom:"2.5px solid "+G2b,paddingBottom:14,marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                      <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+                        <img src={LOGO} style={{height:54,width:54,objectFit:"cover",borderRadius:8,border:"1px solid #e0d8cc"}}/>
+                        <div>
+                          <p style={{fontSize:11,fontWeight:700,color:"#2c2416"}}>Société Hedi pour les services touristiques — SHST</p>
+                          <p style={{fontSize:15,fontWeight:700,color:G2b,letterSpacing:1}}>IMPAVID HOTEL</p>
+                          <p style={{fontSize:10,color:"#6a5a45"}}>Rue Jamel Abdelnasser, Gabès 6000 · MF : 1661336G</p>
+                          <p style={{fontSize:10,color:"#6a5a45"}}>✉ impavidhotel@gmail.com · Tél/Fax : 75 220 856</p>
+                        </div>
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <p style={{fontSize:10,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:1,marginBottom:3}}>{fact.type==="devis"?"Devis N°":"Facture N°"}</p>
+                        <p style={{fontSize:20,fontWeight:800,color:"#2c2416"}}>{fact.numero}</p>
+                        <p style={{fontSize:11,color:"#555",marginTop:4}}>Date : {new Date(fact.created_at).toLocaleDateString("fr-FR")}</p>
+                      </div>
+                    </div>
+                    {fact.client&&(
+                      <div style={{marginBottom:14,borderRadius:4,padding:"10px 14px",border:"1px solid #ccc"}}>
+                        <p style={{fontSize:9,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Facturé à</p>
+                        <p style={{fontSize:15,fontWeight:600,color:"#2c2416"}}>{fact.client}</p>
+                        {fact.mf&&<p style={{fontSize:11,color:"#6a5a45",fontWeight:600}}>MF : {fact.mf}</p>}
+                        {fact.cin&&<p style={{fontSize:11,color:"#6a5a45"}}>CIN : {fact.cin}</p>}
+                        {fact.phone&&<p style={{fontSize:11,color:"#6a5a45"}}>{fact.phone}</p>}
+                        {fact.email&&<p style={{fontSize:11,color:"#6a5a45"}}>{fact.email}</p>}
+                      </div>
+                    )}
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:16}}>
+                      <thead>
+                        <tr style={{borderBottom:"2px solid #000"}}>
+                          {["Réf.","Désignation","Qté","P.U. HT","P.U. TTC","Total HT","Total TTC"].map((h,i)=>(
+                            <th key={i} style={{textAlign:i>=3?"right":"left",padding:"9px 8px",fontSize:9,fontWeight:700,color:"#555",textTransform:"uppercase"}}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lines.filter(l=>l.desc||l.code).map((l,i)=>(
+                          <tr key={i} style={{borderBottom:"1px solid #eee"}}>
+                            <td style={{padding:"10px 8px",fontSize:10,color:"#555"}}>{l.code==="AUTRE"?"":l.code||""}</td>
+                            <td style={{padding:"10px 8px",fontWeight:500,color:"#2c2416"}}>{l.desc||""}</td>
+                            <td style={{padding:"10px 8px",textAlign:"right"}}>{l.qty}</td>
+                            <td style={{padding:"10px 8px",textAlign:"right",color:"#6a5a45"}}>{l.prixHT.toFixed(3)}</td>
+                            <td style={{padding:"10px 8px",textAlign:"right"}}>{(parseFloat(l.prixTTC)||0).toFixed(3)}</td>
+                            <td style={{padding:"10px 8px",textAlign:"right",fontWeight:600}}>{l.totalHT.toFixed(3)}</td>
+                            <td style={{padding:"10px 8px",textAlign:"right",fontWeight:700,color:G2b}}>{l.totalTTC.toFixed(3)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
+                      <table style={{fontSize:11,borderCollapse:"collapse",minWidth:280,border:"1px solid #ccc",borderRadius:8,overflow:"hidden"}}>
+                        <tbody>
+                          <tr style={{borderBottom:"1px solid #e0d8cc",background:"#faf8f5"}}><td style={{padding:"8px 16px",color:"#6a5a45"}}>Total HT</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600,color:"#6a5a45",minWidth:130}}>{(fact.montant_ht||0).toFixed(3)} TND</td></tr>
+                          <tr style={{borderBottom:"1px solid #e0d8cc",background:"#faf8f5"}}><td style={{padding:"8px 16px",color:"#6a5a45"}}>TVA (7%)</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600,color:"#6a5a45"}}>{(fact.tva||0).toFixed(3)} TND</td></tr>
+                          {(fact.remise||0)>0&&<tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff5f5"}}><td style={{padding:"8px 16px",color:"#c95050",fontWeight:600}}>Remise ({fact.remise}%)</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:700,color:"#c95050"}}>− {(Math.round((fact.montant_ht||0)*((fact.remise||0)/100)*100)/100).toFixed(3)} TND</td></tr>}
+                          {fact.type!=="devis"&&<tr style={{borderBottom:"1px solid #e0d8cc",background:"#faf8f5"}}><td style={{padding:"8px 16px",color:"#6a5a45"}}>Timbre fiscal</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600,color:"#6a5a45"}}>1,000 TND</td></tr>}
+                          <tr style={{background:G2b}}><td style={{padding:"11px 16px",fontWeight:800,fontSize:13,color:"#fff"}}>{fact.type==="devis"?"Total TTC":"Net à payer"}</td><td style={{padding:"11px 16px",fontWeight:800,fontSize:16,color:"#fff",textAlign:"right"}}>{(fact.montant_ttc||0).toFixed(3)} TND</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    {fact.notes&&<p style={{fontSize:10,color:"#333",background:"#fff",padding:"8px 12px",borderRadius:6,marginBottom:12,borderLeft:"3px solid #999"}}><strong>Notes :</strong> {fact.notes}</p>}
+                    <p style={{fontSize:9,color:"#333",borderTop:"1px solid #ccc",paddingTop:10,marginTop:8}}>
+                      {fact.type==="devis"?`Devis non contractuel, valable 30 jours — ${fact.numero}`:`Arrêtée la présente facture à la somme de : ${montantEnLettres(fact.montant_ttc||0)}`}
+                    </p>
+                    <SignatureBlock showCachet={true}/>
+                  </div>
+                )}
 
-                {/* Totaux */}
-                <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
-                  <table style={{fontSize:11,borderCollapse:"collapse",minWidth:280,border:"1px solid #ccc",borderRadius:8,overflow:"hidden"}}>
-                    <tbody>
-                      <tr style={{borderBottom:"1px solid #e0d8cc",background:"#faf8f5"}}><td style={{padding:"8px 16px",color:"#6a5a45"}}>Total HT</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600,color:"#6a5a45",minWidth:130}}>{(f.montant_ht||0).toFixed(3)} TND</td></tr>
-                      <tr style={{borderBottom:"1px solid #e0d8cc",background:"#faf8f5"}}><td style={{padding:"8px 16px",color:"#6a5a45"}}>TVA (7%)</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600,color:"#6a5a45"}}>{(f.tva||0).toFixed(3)} TND</td></tr>
-                      {(f.remise||0)>0&&<tr style={{borderBottom:"1px solid #e0d8cc",background:"#fff5f5"}}><td style={{padding:"8px 16px",color:"#c95050",fontWeight:600}}>Remise ({f.remise}%)</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:700,color:"#c95050"}}>—</td></tr>}
-                      {f.type!=="devis"&&<tr style={{borderBottom:"1px solid #e0d8cc",background:"#faf8f5"}}><td style={{padding:"8px 16px",color:"#6a5a45"}}>Timbre fiscal</td><td style={{padding:"8px 16px",textAlign:"right",fontWeight:600,color:"#6a5a45"}}>1,000 TND</td></tr>}
-                      <tr style={{background:G2b}}><td style={{padding:"11px 16px",fontWeight:800,fontSize:13,color:"#fff"}}>{f.type==="devis"?"Total TTC":"Net à payer"}</td><td style={{padding:"11px 16px",fontWeight:800,fontSize:16,color:"#fff",textAlign:"right"}}>{(f.montant_ttc||0).toFixed(3)} TND</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                {f.notes&&<p style={{fontSize:10,color:"#333",background:"#fff",padding:"8px 12px",borderRadius:6,marginBottom:12,borderLeft:"3px solid #999"}}><strong>Notes :</strong> {f.notes}</p>}
-                <p style={{fontSize:9,color:"#333",borderTop:"1px solid #ccc",paddingTop:10,marginTop:8}}>
-                  {f.type==="devis"?`Devis non contractuel, valable 30 jours — ${f.numero}`:`Arrêtée la présente facture à la somme de : ${montantEnLettres(f.montant_ttc||0)}`}
-                </p>
-                <SignatureBlock showCachet={true}/>
               </div>
             </div>
-          </div>
-        );
+          );
+        }
+
+        return <ArchiveModal fact={modalFact}/>;
       })()}
     </div>
   );
@@ -964,8 +1071,8 @@ function App(){
     input::placeholder,textarea::placeholder{color:#b0a080}
     select option{background:#fff}
     button{cursor:pointer;font-family:"Jost",sans-serif}
-    .nav-btn{background:none;border:none;color:#8a7040;padding:12px 22px;font-size:12px;letter-spacing:2px;text-transform:uppercase;transition:all .2s;border-bottom:3px solid transparent;font-weight:500}
-    .nav-btn:hover{color:#2a1e08}.nav-btn.active{color:#c9952a;border-bottom-color:#c9952a}
+    .nav-btn{background:none;border:none;color:#a09060;padding:11px 20px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;transition:all .2s;border-left:3px solid transparent;font-weight:500;text-align:left;width:100%;display:flex;align-items:center;gap:10px;border-radius:0 6px 6px 0}
+    .nav-btn:hover{color:#2a1e08;background:#f5efe0}.nav-btn.active{color:#c9952a;border-left-color:#c9952a;background:#fef9f0;font-weight:700}
     .btn-gold{background:#c9952a;color:#fff;border:none;padding:11px 24px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;border-radius:6px;transition:all .2s;font-weight:600;box-shadow:0 2px 8px rgba(201,149,42,0.3)}
     .btn-gold:hover{background:#a87820;box-shadow:0 4px 12px rgba(201,149,42,0.4)}
     .btn-gold:disabled{opacity:.5;cursor:not-allowed}
@@ -1032,34 +1139,57 @@ function App(){
   );
 
   return(
-    <div style={{fontFamily:'"Cormorant Garamond",Georgia,serif',minHeight:"100vh",background:"#f5f0e8",color:"#2a1e08"}}>
+    <div style={{fontFamily:'"Cormorant Garamond",Georgia,serif',minHeight:"100vh",background:"#f5f0e8",color:"#2a1e08",display:"flex"}}>
       <style>{css}</style>
 
-      {/* HEADER */}
-      <header id="no-print" style={{background:"#fff",borderBottom:"1px solid #e8ddc8",padding:"0 40px",display:"flex",alignItems:"center",justifyContent:"space-between",height:70,position:"sticky",top:0,zIndex:50,boxShadow:"0 2px 12px rgba(42,30,8,0.08)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:14}}>
-          <img src={LOGO} alt="Impavid" style={{height:46,width:46,objectFit:"cover",borderRadius:6,border:"2px solid #e8d0a0"}}/>
+      {/* ── SIDEBAR GAUCHE ── */}
+      <aside id="no-print" style={{width:210,minWidth:210,background:"#fff",borderRight:"1px solid #e8ddc8",display:"flex",flexDirection:"column",position:"fixed",top:0,left:0,height:"100vh",zIndex:50,boxShadow:"2px 0 12px rgba(42,30,8,0.07)"}}>
+        {/* Logo */}
+        <div style={{padding:"22px 20px 18px",borderBottom:"1px solid #f0e8d8",display:"flex",alignItems:"center",gap:12}}>
+          <img src={LOGO} alt="Impavid" style={{height:40,width:40,objectFit:"cover",borderRadius:6,border:"2px solid #e8d0a0",flexShrink:0}}/>
           <div>
-            <p style={{fontSize:18,letterSpacing:5,color:"#c9952a",fontWeight:400,lineHeight:1.1}}>IMPAVID</p>
-            <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,letterSpacing:3,color:"#b0a070",textTransform:"uppercase"}}>Séjour Urbain Raffiné</p>
+            <p style={{fontSize:14,letterSpacing:4,color:"#c9952a",fontWeight:400,lineHeight:1.1}}>IMPAVID</p>
+            <p style={{fontFamily:'"Jost",sans-serif',fontSize:8,letterSpacing:2,color:"#b0a070",textTransform:"uppercase"}}>Séjour Urbain Raffiné</p>
           </div>
         </div>
-        <nav style={{display:"flex",gap:0}}>
-          {[["dashboard","Tableau de Bord"],["rooms","Chambres"],["calendrier","Calendrier"],["reservations","Réservations"],["historique","📒 Historique"],["archives","📁 Archives"],["menage","🧹 Ménage"],["linge","🛏 Linge"],["resources","Ressources"]].map(([v,l])=>(
-            <button key={v} className={"nav-btn "+(view===v?"active":"")} onClick={()=>setView(v)}>{l}</button>
+        {/* Navigation */}
+        <nav style={{flex:1,padding:"12px 8px",overflowY:"auto",display:"flex",flexDirection:"column",gap:2}}>
+          {[
+            ["dashboard","🏠","Tableau de Bord"],
+            ["rooms","🛏","Chambres"],
+            ["calendrier","📅","Calendrier"],
+            ["reservations","📋","Réservations"],
+            ["historique","📒","Historique"],
+            ["archives","📁","Archives"],
+            ["menage","🧹","Ménage"],
+            ["linge","🧺","Linge"],
+            ["resources","👥","Ressources"],
+          ].map(([v,icon,l])=>(
+            <button key={v} className={"nav-btn "+(view===v?"active":"")} onClick={()=>setView(v)}>
+              <span style={{fontSize:15,flexShrink:0}}>{icon}</span>
+              <span>{l}</span>
+            </button>
           ))}
         </nav>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
+        {/* Statut connexion */}
+        <div style={{padding:"14px 20px",borderTop:"1px solid #f0e8d8"}}>
           <span style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:syncing?"#c9952a":"#5a9e6f",display:"flex",alignItems:"center",gap:6}}>
-            <span style={{width:8,height:8,borderRadius:"50%",background:syncing?"#c9952a":"#5a9e6f",display:"inline-block"}} className={syncing?"pulse":""}/>
-            {syncing?"Sync...":"Connecté"}
+            <span style={{width:7,height:7,borderRadius:"50%",background:syncing?"#c9952a":"#5a9e6f",display:"inline-block",flexShrink:0}} className={syncing?"pulse":""}/>
+            {syncing?"Synchronisation...":"Connecté"}
           </span>
-          <button onClick={loadAll} title="Actualiser" style={{background:"none",border:"1px solid #e0d0b0",color:"#8a7040",padding:"7px 10px",borderRadius:6,fontSize:14,cursor:"pointer",fontFamily:'"Jost",sans-serif'}}>🔄</button>
+        </div>
+      </aside>
+
+      {/* ── CONTENU PRINCIPAL ── */}
+      <div style={{marginLeft:210,flex:1,display:"flex",flexDirection:"column",minHeight:"100vh"}}>
+
+        {/* Topbar actions */}
+        <header id="no-print" style={{background:"#fff",borderBottom:"1px solid #e8ddc8",padding:"0 32px",display:"flex",alignItems:"center",justifyContent:"flex-end",height:60,position:"sticky",top:0,zIndex:40,boxShadow:"0 2px 8px rgba(42,30,8,0.06)",gap:10}}>
+          <button onClick={loadAll} title="Actualiser" style={{background:"none",border:"1px solid #e0d0b0",color:"#8a7040",padding:"6px 10px",borderRadius:6,fontSize:14,cursor:"pointer",fontFamily:'"Jost",sans-serif'}}>🔄</button>
           <button className="btn-outline" onClick={openFreeInvoice}>🧾 Facture libre</button>
           <button className="btn-outline" onClick={openDevis}>📋 Devis Groupe</button>
           <button className="btn-gold" onClick={()=>openNew()}>+ Réservation</button>
-        </div>
-      </header>
+        </header>
 
       {/* TOAST */}
       {toast&&(
@@ -1068,7 +1198,7 @@ function App(){
         </div>
       )}
 
-      <main id="no-print" style={{padding:"32px 40px",maxWidth:1360,margin:"0 auto"}}>
+      <main id="no-print" style={{padding:"28px 32px",flex:1}}>
 
         {/* ── DASHBOARD ── */}
         {view==="dashboard"&&(
@@ -1375,7 +1505,7 @@ function App(){
           function getStatus(roomId, dateStr){
             const res=reservations.find(r=>
               r.roomId===roomId&&
-              ["confirmed","checkedin","pending","blocked"].includes(r.status)&&
+              ["confirmed","checkedin","pending","blocked","checkedout"].includes(r.status)&&
               r.checkin<=dateStr&&r.checkout>dateStr
             );
             if(!res) return null;
@@ -1387,12 +1517,14 @@ function App(){
             checkedin:"#1a4f8a",
             pending:"#b07d1a",
             blocked:"#6b35b8",
+            checkedout:"#7a9a7a",
           };
           const STATUS_BG={
             confirmed:"#fef3d0",
             checkedin:"#d0e4f8",
             pending:"#fef3d0",
             blocked:"#ead4f8",
+            checkedout:"#e8f0e8",
           };
 
           return(
@@ -1413,7 +1545,7 @@ function App(){
                 </div>
                 {/* Légende */}
                 <div style={{display:"flex",gap:12}}>
-                  {[["Réservée","#fef3d0","#c9952a"],["Présent","#d0e4f8","#1a4f8a"],["En attente","#fef3d0","#b07d1a"],["Bloquée","#ead4f8","#6b35b8"]].map(([l,bg,c])=>(
+                  {[["Réservée","#fef3d0","#c9952a"],["Présent","#d0e4f8","#1a4f8a"],["En attente","#fef3d0","#b07d1a"],["Bloquée","#ead4f8","#6b35b8"],["Passée","#e8f0e8","#7a9a7a"]].map(([l,bg,c])=>(
                     <div key={l} style={{display:"flex",alignItems:"center",gap:5}}>
                       <div style={{width:14,height:14,borderRadius:3,background:bg,border:"1.5px solid "+c}}/>
                       <span style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#6a5530"}}>{l}</span>
@@ -1464,7 +1596,7 @@ function App(){
                                 const status=getStatus(room.id,d);
                                 const res=reservations.find(r=>
                                   r.roomId===room.id&&
-                                  ["confirmed","checkedin","pending","blocked"].includes(r.status)&&
+                                  ["confirmed","checkedin","pending","blocked","checkedout"].includes(r.status)&&
                                   r.checkin<=d&&r.checkout>d
                                 );
                                 const isToday=d===TODAY;
@@ -2468,6 +2600,7 @@ function App(){
                   {!["cancelled","blocked","checkedout"].includes(r.status)&&<button className="btn-outline" onClick={()=>{updateStatus(r.id,"cancelled");setModal({type:"detail",data:{...r,status:"cancelled"}});}}>Annuler</button>}
                   {!r.paid&&r.status!=="blocked"&&<button className="btn-outline" onClick={()=>{markPaid(r.id);setModal({type:"detail",data:{...r,paid:true}});}}>Marquer payé</button>}
                   {r.status!=="blocked"&&<button className="btn-outline" onClick={()=>openInvoice(r)}>Facture</button>}
+                  {r.pension==="dp"&&["confirmed","checkedin"].includes(r.status)&&<button className="btn-outline" style={{background:"#fff8ee",borderColor:"#e8b84b",color:"#8a5c10"}} onClick={()=>setModal({type:"bonRestaurant",data:r})}>🍽 Bon Restaurant</button>}
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between"}}>
                   <button className="btn-red" onClick={()=>{if(confirm("Supprimer cette réservation ?"))deleteRes(r.id);}}>Supprimer</button>
@@ -2478,6 +2611,64 @@ function App(){
                 </div>
               </div>
             );
+          })()}
+
+          {/* BON RESTAURANT */}
+          {modal.type==="bonRestaurant"&&(()=>{
+            const r=modal.data;
+            const G2="#8B6434";
+            function BonRestaurantModal(){
+              const [date,setDate]=React.useState(TODAY);
+              const [repas,setRepas]=React.useState("diner");
+              const [showCachet,setShowCachet]=React.useState(true);
+              function printBon(){
+                doPrint({
+                  type:"bonRestaurant",
+                  guest:r.guest,
+                  date,
+                  repas,
+                  showCachet,
+                  pension:"DP — Demi Pension",
+                });
+              }
+              return(
+                <div className="modal" style={{maxWidth:420,fontFamily:'"Inter",sans-serif'}}>
+                  <div style={{borderBottom:"2px solid "+G2,paddingBottom:14,marginBottom:18,display:"flex",alignItems:"center",gap:14}}>
+                    <img src={LOGO} alt="" style={{height:44,width:44,objectFit:"cover",borderRadius:6,border:"1px solid #e0d8cc"}}/>
+                    <div>
+                      <p style={{fontSize:11,fontWeight:700,color:G2,letterSpacing:1,textTransform:"uppercase"}}>Bon de Restaurant</p>
+                      <p style={{fontSize:13,fontWeight:800,color:"#2c2416"}}>IMPAVID HOTEL</p>
+                    </div>
+                  </div>
+                  <div style={{display:"grid",gap:14,marginBottom:20}}>
+                    <div className="form-group">
+                      <label>Client</label>
+                      <p style={{fontFamily:'"Jost",sans-serif',fontSize:16,fontWeight:600,color:"#2a1e08",padding:"8px 0"}}>{r.guest}</p>
+                    </div>
+                    <div className="form-group">
+                      <label>Valable le</label>
+                      <input type="date" value={date} onChange={e=>setDate(e.target.value)}/>
+                    </div>
+                    <div className="form-group">
+                      <label>Type de repas</label>
+                      <select value={repas} onChange={e=>setRepas(e.target.value)}>
+                        <option value="dejeuner">🌤 Déjeuner</option>
+                        <option value="diner">🌙 Dîner</option>
+                      </select>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#faf8f5",border:"1px solid #e0d8cc",borderRadius:8}}>
+                      <input type="checkbox" id="cachetBon" checked={showCachet} onChange={e=>setShowCachet(e.target.checked)} style={{width:16,height:16,cursor:"pointer"}}/>
+                      <label htmlFor="cachetBon" style={{fontFamily:'"Jost",sans-serif',fontSize:13,color:"#2a1e08",cursor:"pointer",userSelect:"none"}}>Afficher le cachet de l'hôtel</label>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+                    <button className="btn-outline" onClick={()=>setModal({type:"detail",data:r})}>← Retour</button>
+                    <button className="btn-gold" onClick={printBon}>🖨 Imprimer le bon</button>
+                  </div>
+                </div>
+              );
+            }
+            return <BonRestaurantModal/>;
           })()}
 
           {/* FACTURE */}
@@ -2834,7 +3025,7 @@ function App(){
                         <p style={{fontSize:11,fontWeight:700,color:"#2c2416"}}>Société Hedi pour les services touristiques — SHST</p>
                         <p style={{fontSize:16,fontWeight:700,color:G2,letterSpacing:1}}>IMPAVID HOTEL</p>
                         <p style={{fontSize:10,color:"#6a5a45",marginTop:3}}>Rue Jamel Abdelnasser, Gabès 6000</p>
-                        <p style={{fontSize:10,color:"#6a5a45"}}>impavidhotel@gmail.com · MF : <strong>1661336G</strong></p>
+                        <p style={{fontSize:10,color:"#6a5a45"}}>impavidhotel@gmail.com · MF : <strong>1661336G</strong> · Tél/Fax : 75 220 856</p>
                       </div>
                     </div>
                     <div style={{textAlign:"right"}}>
@@ -3061,10 +3252,13 @@ function App(){
                     )}
                     <button className="btn-primary" style={{opacity:di.saved?1:.45,cursor:di.saved?"pointer":"not-allowed"}} onClick={()=>{
                       if(!di.saved) return;
-                      const lc2=(di.lines||[]).map(l=>{const ttc=parseFloat(l.prixTTC)||0;const ht=Math.round((ttc/1.07)*1000)/1000;const qty=parseFloat(l.qty)||1;return{...l,totalTTC:Math.round(qty*ttc*100)/100};});
+                      const lc2=(di.lines||[]).map(l=>{const ttc=parseFloat(l.prixTTC)||0;const ht=Math.round((ttc/1.07)*1000)/1000;const qty=parseFloat(l.qty)||1;return{...l,totalHT:Math.round(qty*ht*100)/100,totalTTC:Math.round(qty*ttc*100)/100};});
                       const gTTC2=Math.round(lc2.reduce((a,l)=>a+l.totalTTC,0)*100)/100;
-                      const gHT2=Math.round((gTTC2/1.07)*100)/100;
-                      doPrint({numero:di.devNum,type:'devis',client:di.client,phone:di.phone,montant_ht:gHT2,tva:Math.round((gTTC2-gHT2)*100)/100,montant_ttc:gTTC2,remise:parseFloat(di.remise)||0,notes:di.notes,lignes:di.lines,created_at:new Date()});
+                      const gHT2=Math.round(lc2.reduce((a,l)=>a+l.totalHT,0)*100)/100;
+                      const rem2=parseFloat(di.remise)||0;
+                      const remMont2=Math.round(gTTC2*(rem2/100)*100)/100;
+                      const net2=Math.round((gTTC2-remMont2)*100)/100;
+                      doPrint({numero:di.devNum,type:'devis',client:di.client,phone:di.phone,montant_ht:gHT2,tva:Math.round((gTTC2-gHT2)*100)/100,montant_ttc:net2,remise:rem2,notes:di.notes,lignes:di.lines,created_at:new Date()});
                     }}>🖨 Imprimer</button>
                   </div>
                 </div>
@@ -3079,7 +3273,7 @@ function App(){
                         <p style={{fontSize:11,fontWeight:700,color:"#2c2416"}}>Société Hedi pour les services touristiques — SHST</p>
                         <p style={{fontSize:16,fontWeight:700,color:G2,letterSpacing:1}}>IMPAVID HOTEL</p>
                         <p style={{fontSize:10,color:"#6a5a45",marginTop:3}}>Rue Jamel Abdelnasser, Gabès 6000</p>
-                        <p style={{fontSize:10,color:"#6a5a45"}}>impavidhotel@gmail.com · MF : <strong>1661336G</strong></p>
+                        <p style={{fontSize:10,color:"#6a5a45"}}>impavidhotel@gmail.com · MF : <strong>1661336G</strong> · Tél/Fax : 75 220 856</p>
                       </div>
                     </div>
                     <div style={{textAlign:"right"}}>
@@ -3151,6 +3345,86 @@ function App(){
       {printData&&(
         <div id="print-zone" style={{display:"none"}}>
           <div className="print-a4">
+
+          {/* ─── BON RESTAURANT ─── */}
+          {printData.type==="bonRestaurant"?(()=>{
+            const G2="#8B6434";
+            const repasLabel=printData.repas==="diner"?"Dîner":"Déjeuner";
+            const repasIcon=printData.repas==="diner"?"🌙":"🌤";
+            const dateStr=new Date(printData.date).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+            return(
+              <div style={{
+                width:210,
+                margin:"15mm auto 0",
+                fontFamily:'"Inter",Arial,sans-serif',
+                fontSize:10,
+                border:"2px solid #c9952a",
+                borderRadius:6,
+                overflow:"hidden",
+                boxShadow:"0 2px 8px rgba(0,0,0,0.08)"
+              }}>
+                {/* ── En-tête ── */}
+                <div style={{background:"#2c2416",padding:"10px 0",textAlign:"center"}}>
+                  <img src={LOGO} alt="" style={{height:32,width:32,objectFit:"cover",borderRadius:4,border:"1px solid #c9952a",display:"block",margin:"0 auto 6px"}}/>
+                  <p style={{fontSize:11,fontWeight:800,color:"#f5d984",letterSpacing:1.5,textTransform:"uppercase",margin:0}}>IMPAVID HOTEL</p>
+                  <p style={{fontSize:7,color:"#c0a860",marginTop:2,letterSpacing:1}}>GABÈS</p>
+                </div>
+
+                {/* ── Bandeau titre ── */}
+                <div style={{background:"#c9952a",padding:"5px 0",textAlign:"center"}}>
+                  <p style={{fontSize:9,fontWeight:800,color:"#fff",letterSpacing:2,textTransform:"uppercase",margin:0}}>BON DE RESTAURANT</p>
+                </div>
+
+                {/* ── Corps ── */}
+                <div style={{padding:"10px 12px",background:"#fff"}}>
+
+                  {/* Pension */}
+                  <p style={{textAlign:"center",fontSize:8,fontWeight:700,color:"#8a5c10",textTransform:"uppercase",letterSpacing:1,marginBottom:10,borderBottom:"1px dashed #e0d0b0",paddingBottom:6}}>
+                    {printData.pension}
+                  </p>
+
+                  {/* Repas */}
+                  <div style={{textAlign:"center",background:"#fef3d0",border:"1px solid #e8c870",borderRadius:4,padding:"6px 0",marginBottom:10}}>
+                    <p style={{fontSize:14,margin:0}}>{repasIcon}</p>
+                    <p style={{fontSize:11,fontWeight:800,color:"#8a5c10",margin:"2px 0 0",letterSpacing:.5}}>{repasLabel}</p>
+                  </div>
+
+                  {/* Date */}
+                  <div style={{marginBottom:8}}>
+                    <p style={{fontSize:7,fontWeight:700,color:"#a09080",textTransform:"uppercase",letterSpacing:.8,margin:"0 0 2px"}}>Valable le</p>
+                    <p style={{fontSize:10,fontWeight:700,color:"#2c2416",margin:0}}>{dateStr}</p>
+                  </div>
+
+                  {/* Client */}
+                  <div style={{marginBottom:10,background:"#faf8f5",borderRadius:4,padding:"6px 8px",border:"1px solid #e8d8b0"}}>
+                    <p style={{fontSize:7,fontWeight:700,color:"#a09080",textTransform:"uppercase",letterSpacing:.8,margin:"0 0 2px"}}>Client</p>
+                    <p style={{fontSize:12,fontWeight:800,color:"#2c2416",margin:0}}>{printData.guest}</p>
+                  </div>
+
+                  {/* Mention */}
+                  <p style={{fontSize:7,color:"#a09080",textAlign:"center",borderTop:"1px dashed #e0d0b0",paddingTop:6,marginBottom:8}}>
+                    Bon valable pour un seul repas · Non remboursable
+                  </p>
+
+                  {/* Signature + Cachet */}
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:8}}>
+                    <div style={{flex:1,textAlign:"center"}}>
+                      <p style={{fontSize:7,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Signature</p>
+                      <div style={{borderTop:"1px solid #c0a870",height:24}}/>
+                    </div>
+                    {printData.showCachet&&(
+                      <div style={{textAlign:"center"}}>
+                        <img src={CACHET_IMG} alt="Cachet" style={{width:55,height:55,objectFit:"contain",mixBlendMode:"multiply",display:"block"}}/>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+            );
+          })():(
+            // ─── FACTURE / DEVIS (comportement existant) ───
+            <React.Fragment>
             {/* En-tête */}
             <div style={{borderBottom:"2px solid #333",paddingBottom:14,marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
               <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
@@ -3159,7 +3433,7 @@ function App(){
                   <p style={{fontSize:11,fontWeight:700,color:"#2c2416"}}>Société Hedi pour les services touristiques — SHST</p>
                   <p style={{fontSize:16,fontWeight:700,color:"#000",letterSpacing:1}}>IMPAVID HOTEL</p>
                   <p style={{fontSize:10,color:"#6a5a45"}}>Rue Jamel Abdelnasser, Gabès 6000</p>
-                  <p style={{fontSize:10,color:"#6a5a45"}}>impavidhotel@gmail.com · MF : <strong>1661336G</strong> · Tél/Fax : 75 278 525</p>
+                  <p style={{fontSize:10,color:"#6a5a45"}}>impavidhotel@gmail.com · MF : <strong>1661336G</strong> · Tél/Fax : 75 220 856</p>
                 </div>
               </div>
               <div style={{textAlign:"right"}}>
@@ -3223,10 +3497,13 @@ function App(){
               {printData.type==="devis"?`Devis non contractuel, valable 30 jours — ${printData.numero}`:`Arrêtée la présente facture à la somme de : ${montantEnLettres(printData.montant_ttc||0)}`}
             </p>
             <SignatureBlock showCachet={printData.showCachet!==false}/>
+          </React.Fragment>
+          )}
           </div>
         </div>
       )}
 
+      </div>{/* fin contenu principal */}
     </div>
   );
 }
