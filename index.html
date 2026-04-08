@@ -2688,37 +2688,58 @@ function App({user,onLogout}){
           {modal.type==="bonRestaurant"&&(()=>{
             const r=modal.data;
             const G2="#8B6434";
+            const n=nights(r.checkin,r.checkout);
+            // Générer une date par nuit : nuit 1 = checkin, nuit 2 = checkin+1, etc.
+            const nuits=Array.from({length:n},(_,i)=>{
+              const d=new Date(r.checkin+"T12:00:00");
+              d.setDate(d.getDate()+i);
+              return d.toISOString().split("T")[0];
+            });
             function BonRestaurantModal(){
-              const [date,setDate]=React.useState(TODAY);
               const [repas,setRepas]=React.useState("diner");
               const [showCachet,setShowCachet]=React.useState(true);
-              function printBon(){
+              function printBons(){
                 doPrint({
                   type:"bonRestaurant",
                   guest:r.guest,
-                  date,
                   repas,
                   showCachet,
                   pension:"DP — Demi Pension",
+                  nuits, // tableau de dates
                 });
               }
               return(
-                <div className="modal" style={{maxWidth:420,fontFamily:'"Inter",sans-serif'}}>
+                <div className="modal" style={{maxWidth:440,fontFamily:'"Inter",sans-serif'}}>
                   <div style={{borderBottom:"2px solid "+G2,paddingBottom:14,marginBottom:18,display:"flex",alignItems:"center",gap:14}}>
                     <img src={LOGO} alt="" style={{height:44,width:44,objectFit:"cover",borderRadius:6,border:"1px solid #e0d8cc"}}/>
                     <div>
-                      <p style={{fontSize:11,fontWeight:700,color:G2,letterSpacing:1,textTransform:"uppercase"}}>Bon de Restaurant</p>
+                      <p style={{fontSize:11,fontWeight:700,color:G2,letterSpacing:1,textTransform:"uppercase"}}>Bons de Restaurant</p>
                       <p style={{fontSize:13,fontWeight:800,color:"#2c2416"}}>IMPAVID HOTEL</p>
                     </div>
                   </div>
                   <div style={{display:"grid",gap:14,marginBottom:20}}>
-                    <div className="form-group">
-                      <label>Client</label>
-                      <p style={{fontFamily:'"Jost",sans-serif',fontSize:16,fontWeight:600,color:"#2a1e08",padding:"8px 0"}}>{r.guest}</p>
+                    {/* Infos client */}
+                    <div style={{background:"#faf8f5",border:"1px solid #e0d8cc",borderRadius:8,padding:"12px 16px"}}>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                        {[["Client",r.guest],["Pension","Demi-Pension (DP)"],["Séjour",new Date(r.checkin).toLocaleDateString("fr-FR")+" → "+new Date(r.checkout).toLocaleDateString("fr-FR")],["Nuits",n+" bon"+(n>1?"s":"")+" à imprimer"]].map(([lbl,val])=>(
+                          <div key={lbl}>
+                            <p style={{fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:2}}>{lbl}</p>
+                            <p style={{fontSize:13,fontWeight:600,color:"#2c2416"}}>{val}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label>Valable le</label>
-                      <input type="date" value={date} onChange={e=>setDate(e.target.value)}/>
+                    {/* Dates générées */}
+                    <div>
+                      <p style={{fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Bons générés</p>
+                      <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                        {nuits.map((d,i)=>(
+                          <div key={d} style={{display:"flex",alignItems:"center",gap:8,background:"#fef9f0",border:"1px solid #e8d8b0",borderRadius:6,padding:"6px 10px"}}>
+                            <span style={{fontFamily:'"Jost",sans-serif',fontSize:11,fontWeight:700,color:"#c9952a",minWidth:20}}>#{i+1}</span>
+                            <span style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#2c2416"}}>{new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                     <div className="form-group">
                       <label>Type de repas</label>
@@ -2734,7 +2755,7 @@ function App({user,onLogout}){
                   </div>
                   <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
                     <button className="btn-outline" onClick={()=>setModal({type:"detail",data:r})}>← Retour</button>
-                    <button className="btn-gold" onClick={printBon}>🖨 Imprimer le bon</button>
+                    <button className="btn-gold" onClick={printBons}>🖨 Imprimer {n} bon{n>1?"s":""}</button>
                   </div>
                 </div>
               );
@@ -3461,9 +3482,9 @@ function App({user,onLogout}){
         // ── BON RESTAURANT NOMINATIF ──
         if(printData.type==="bonRestaurant"){
           const repasIcon=printData.repas==="diner"?"🌙":"🌤";
-          const dateStr=new Date(printData.date).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"long",year:"numeric"});
-          // Taille badge : 90mm × 48mm — 2 colonnes × 5 rangées = 10 bons par A4
-          const UnBon=()=>(
+          // Support ancien format (date unique) et nouveau (nuits multiples)
+          const nuits=printData.nuits||[printData.date];
+          const UnBon=({dateStr})=>(
             <div style={{
               width:"90mm",height:"48mm",
               border:"1.5px solid #c9952a",
@@ -3496,7 +3517,7 @@ function App({user,onLogout}){
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                   <div style={{flex:1}}>
                     <p style={{fontSize:6,fontWeight:700,color:"#a09080",textTransform:"uppercase",letterSpacing:.5,margin:"0 0 1px"}}>Valable le</p>
-                    <p style={{fontSize:9,fontWeight:800,color:"#2c2416",margin:"0 0 5px"}}>{dateStr}</p>
+                    <p style={{fontSize:9,fontWeight:800,color:"#2c2416",margin:"0 0 5px"}}>{new Date(dateStr+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"long",year:"numeric"})}</p>
                     <p style={{fontSize:6,fontWeight:700,color:"#a09080",textTransform:"uppercase",letterSpacing:.5,margin:"0 0 1px"}}>Client</p>
                     <p style={{fontSize:11,fontWeight:800,color:"#2c2416",margin:0,lineHeight:1.2}}>{printData.guest}</p>
                   </div>
@@ -3518,12 +3539,11 @@ function App({user,onLogout}){
             <div id="print-zone" style={{display:"none"}}>
               <div className="print-a4" style={{padding:"8mm"}}>
                 <div style={{display:"flex",flexWrap:"wrap",gap:"3mm",alignContent:"flex-start"}}>
-                  {/* 10 bons par page : 2 col × 5 rangées */}
-                  {[0,1,2,3,4,5,6,7,8,9].map((i,idx)=>(
-                    <React.Fragment key={i}>
-                      <UnBon/>
-                      {idx%2===1&&idx<9&&(
-                        <div style={{width:"100%",borderTop:"1px dashed #d0c090",display:"flex",alignItems:"center",justifyContent:"center",margin:"0"}}>
+                  {nuits.map((d,idx)=>(
+                    <React.Fragment key={d}>
+                      <UnBon dateStr={d}/>
+                      {idx%2===1&&idx<nuits.length-1&&(
+                        <div style={{width:"100%",borderTop:"1px dashed #d0c090",display:"flex",alignItems:"center",justifyContent:"center"}}>
                           <span style={{background:"#fff",padding:"0 6px",fontSize:7,color:"#c9952a"}}>✂</span>
                         </div>
                       )}
