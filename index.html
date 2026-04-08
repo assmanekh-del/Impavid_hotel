@@ -224,8 +224,8 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
   const [loading,setLoading]=React.useState(true);
   const [search,setSearch]=React.useState("");
   const [filterType,setFilterType]=React.useState("all");
-  const [filterMois,setFilterMois]=React.useState(String(new Date().getMonth()+1).padStart(2,'0'));
-  const [filterAnnee,setFilterAnnee]=React.useState(String(new Date().getFullYear()));
+  const [filterMois,setFilterMois]=React.useState("");
+  const [filterAnnee,setFilterAnnee]=React.useState("");
   const [modalFact,setModalFact]=React.useState(null);
 
   const MOIS=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
@@ -1147,16 +1147,19 @@ function App({user,onLogout}){
     td:hover{background:#fef9ee!important}
     @media print{
       *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-      html,body{background:#fff!important;margin:0;padding:0}
+      html,body{background:#fff!important;margin:0;padding:0;width:210mm}
       #no-print{display:none!important}
       .no-print{display:none!important}
-      .print-only{display:none!important}
       .modal-overlay{display:none!important}
       .modal{display:none!important}
       .print-a4{display:none!important}
-      #print-zone{display:block!important;background:#fff!important}
+      /* Zone impression globale (facture/devis/bons) */
+      #print-zone{display:block!important;background:#fff!important;position:fixed;top:0;left:0;width:210mm;min-height:297mm;z-index:9999}
       #print-zone *{background-color:transparent}
-      #print-zone .print-a4{display:block!important;background:#fff!important;width:210mm;min-height:297mm;padding:14mm 16mm;box-sizing:border-box;font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000}
+      #print-zone .print-a4{display:block!important;background:#fff!important;width:210mm;min-height:297mm;padding:12mm 14mm;box-sizing:border-box;font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000;margin:0}
+      /* Zone impression dans modaux (facture réservation, facture libre, devis) */
+      .print-only{display:none!important}
+      .print-only.print-a4{display:block!important;background:#fff!important;position:fixed;top:0;left:0;width:210mm;min-height:297mm;padding:12mm 14mm;box-sizing:border-box;font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000;margin:0;z-index:9999}
       @page{size:A4 portrait;margin:0}
     }
     .print-only{display:none}
