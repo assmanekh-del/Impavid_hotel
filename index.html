@@ -1312,12 +1312,16 @@ function App({user,onLogout}){
                 YESTERDAY.setDate(YESTERDAY.getDate()-1);
                 const YESTERDAY_STR=YESTERDAY.toISOString().split("T")[0];
                 const isPDJ=h>=6&&h<11;
-                // Date locale (pas UTC) pour éviter le décalage de timezone
-                // Règle : a dormi cette nuit = arrivé avant aujourd'hui ET repart aujourd'hui ou après
+                // 6h-11h (service) : ceux qui ont dormi la nuit dernière
+                //   checkin < aujourd'hui ET checkout >= aujourd'hui
+                // après 11h (PDJ demain) : ceux qui dorment cette nuit
+                //   checkin <= aujourd'hui ET checkout > aujourd'hui
                 const resPDJ=reservations.filter(r=>
                   ["confirmed","checkedin","checkedout"].includes(r.status)&&
-                  r.checkin<getToday()&&
-                  r.checkout>=getToday()
+                  (isPDJ
+                    ? r.checkin<getToday()&&r.checkout>=getToday()
+                    : r.checkin<=getToday()&&r.checkout>getToday()
+                  )
                 );
                 const totalPersonnes=resPDJ.reduce((a,r)=>{
                   const adults=parseInt(r.adults)||1;
@@ -3486,7 +3490,7 @@ function App({user,onLogout}){
           const nuits=printData.nuits||[printData.date];
           const UnBon=({dateStr})=>(
             <div style={{
-              width:"90mm",height:"48mm",
+              width:"120mm",height:"48mm",
               border:"1.5px solid #c9952a",
               borderRadius:4,
               overflow:"hidden",
@@ -3538,11 +3542,11 @@ function App({user,onLogout}){
           return(
             <div id="print-zone" style={{display:"none"}}>
               <div className="print-a4" style={{padding:"8mm"}}>
-                <div style={{display:"flex",flexWrap:"wrap",gap:"3mm",alignContent:"flex-start"}}>
+                <div style={{display:"flex",flexDirection:"column",gap:"3mm"}}>
                   {nuits.map((d,idx)=>(
                     <React.Fragment key={d}>
                       <UnBon dateStr={d}/>
-                      {idx%2===1&&idx<nuits.length-1&&(
+                      {idx<nuits.length-1&&(
                         <div style={{width:"100%",borderTop:"1px dashed #d0c090",display:"flex",alignItems:"center",justifyContent:"center"}}>
                           <span style={{background:"#fff",padding:"0 6px",fontSize:7,color:"#c9952a"}}>✂</span>
                         </div>
