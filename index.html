@@ -174,8 +174,8 @@ const STATUS = {
   blocked:{label:"Bloquée",color:"#6b35b8",bg:"#ead4f8"},
 };
 
-function toDb(f){return{guest:f.guest,email:f.email||"",phone:f.phone||"",room_id:parseInt(f.roomId),checkin:f.checkin,checkout:f.checkout,adults:parseInt(f.adults)||1,status:f.status,paid:f.paid||false,extra_bed:f.extraBed||false,baby_bed:f.babyBed||false,baby_bed_location:f.babyBedLocation||"",notes:f.notes||"",claim:f.claim||"",assigned_menage:f.assignedMenage||"",children:parseInt(f.children)||0,breakfast:f.breakfast||"non",pension:f.pension||"lpd",custom_price:f.customPrice!==undefined?f.customPrice:null,billing_type:f.billingType||null,remise:parseFloat(f.remise)||0,cin:f.cin||""};}
-function fromDb(r){return{id:r.id,guest:r.guest,email:r.email,phone:r.phone,roomId:r.room_id,checkin:r.checkin,checkout:r.checkout,adults:r.adults,status:r.status,paid:r.paid,extraBed:r.extra_bed,babyBed:r.baby_bed,babyBedLocation:r.baby_bed_location,notes:r.notes,claim:r.claim,assignedMenage:r.assigned_menage||"",children:r.children||0,breakfast:r.breakfast||"non",pension:r.pension||"lpd",customPrice:r.custom_price!=null?r.custom_price:undefined,billingType:r.billing_type||null,remise:r.remise||0,cin:r.cin||""};}function isOcc(roomId,reservations,excludeId=null){return reservations.some(r=>r.roomId===roomId&&r.id!==excludeId&&["confirmed","checkedin","pending","blocked"].includes(r.status)&&r.checkin<=getToday()&&r.checkout>getToday());}
+function toDb(f){return{guest:f.guest,email:f.email||"",phone:f.phone||"",room_id:parseInt(f.roomId),checkin:f.checkin,checkout:f.checkout,adults:parseInt(f.adults)||1,status:f.status,paid:f.paid||false,extra_bed:f.extraBed||false,baby_bed:f.babyBed||false,baby_bed_location:f.babyBedLocation||"",notes:f.notes||"",claim:f.claim||"",assigned_menage:f.assignedMenage||"",children:parseInt(f.children)||0,breakfast:f.breakfast||"non",pension:f.pension||"lpd",custom_price:f.customPrice!==undefined?f.customPrice:null,billing_type:f.billingType||null,remise:parseFloat(f.remise)||0,cin:f.cin||"",nationality:f.nationality||"",passport:f.passport||"",profession:f.profession||"",provenance:f.provenance||"",accompagnants:f.accompagnants||[]};}
+function fromDb(r){return{id:r.id,guest:r.guest,email:r.email,phone:r.phone,roomId:r.room_id,checkin:r.checkin,checkout:r.checkout,adults:r.adults,status:r.status,paid:r.paid,extraBed:r.extra_bed,babyBed:r.baby_bed,babyBedLocation:r.baby_bed_location,notes:r.notes,claim:r.claim,assignedMenage:r.assigned_menage||"",children:r.children||0,breakfast:r.breakfast||"non",pension:r.pension||"lpd",customPrice:r.custom_price!=null?r.custom_price:undefined,billingType:r.billing_type||null,remise:r.remise||0,cin:r.cin||"",nationality:r.nationality||"",passport:r.passport||"",profession:r.profession||"",provenance:r.provenance||"",accompagnants:r.accompagnants||[]};}function isOcc(roomId,reservations,excludeId=null){return reservations.some(r=>r.roomId===roomId&&r.id!==excludeId&&["confirmed","checkedin","pending","blocked"].includes(r.status)&&r.checkin<=getToday()&&r.checkout>getToday());}
 // Vérifie si une chambre est occupée pour des dates spécifiques (chevauchement)
 function isOccForDates(roomId,reservations,checkin,checkout,excludeId=null){
   if(!checkin||!checkout)return false;
@@ -204,7 +204,7 @@ function SignatureBlock({showCachet=true}){
         <p style={{fontSize:8,color:"#a09080",marginBottom:10,fontStyle:"italic"}}>Pour IMPAVID HOTEL — SHST</p>
         {showCachet?(
           <div style={{display:"flex",justifyContent:"center",marginBottom:6}}>
-            <img src={CACHET_IMG} alt="Cachet" style={{width:150,height:150,objectFit:"contain",mixBlendMode:"multiply"}}/>
+            <img src={CACHET_IMG} alt="Cachet" style={{width:265,height:265,objectFit:"contain",mixBlendMode:"multiply"}}/>
           </div>
         ):(
           <div style={{border:"1.5px dashed #c0a870",borderRadius:8,height:70,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:6,background:"#fdfbf7"}}>
@@ -227,6 +227,9 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
   const [filterMois,setFilterMois]=React.useState("");
   const [filterAnnee,setFilterAnnee]=React.useState("");
   const [modalFact,setModalFact]=React.useState(null);
+  const [showSuivi,setShowSuivi]=React.useState(false);
+  const [suiviDu,setSuiviDu]=React.useState("");
+  const [suiviAu,setSuiviAu]=React.useState("");
 
   const MOIS=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
   const anneeActuelle=new Date().getFullYear();
@@ -265,7 +268,10 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
           <p className="section-title">Archives Factures</p>
           <p className="section-sub">{liste.length} document{liste.length>1?"s":""}</p>
         </div>
-        <button className="btn-outline" onClick={loadFactures}>🔄 Actualiser</button>
+        <div style={{display:"flex",gap:8}}>
+          <button className="btn-outline" style={{background:"#f0f4ff",borderColor:"#c0cfee",color:"#3a5fc8"}} onClick={()=>setShowSuivi(true)}>📊 Suivi des factures</button>
+          <button className="btn-outline" onClick={loadFactures}>🔄 Actualiser</button>
+        </div>
       </div>
 
       {/* Filtres */}
@@ -362,12 +368,169 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
         </div>
       )}
 
-      {/* Modal réimpression / édition */}
+      {/* Modal Suivi Factures */}
+      {showSuivi&&(()=>{
+        const du=suiviDu;
+        const au=suiviAu;
+        const listeSuivi=factures.filter(f=>{
+          const d=f.created_at?f.created_at.split("T")[0]:"";
+          const matchDu=!du||d>=du;
+          const matchAu=!au||d<=au;
+          return matchDu&&matchAu&&f.type!=="devis";
+        }).sort((a,b)=>a.created_at.localeCompare(b.created_at));
+        const totalHT=Math.round(listeSuivi.reduce((a,f)=>a+(f.montant_ht||0),0)*1000)/1000;
+        const totalTVA=Math.round(listeSuivi.reduce((a,f)=>a+(f.tva||0),0)*1000)/1000;
+        const totalTTC=Math.round(listeSuivi.reduce((a,f)=>a+(f.montant_ttc||0),0)*1000)/1000;
+
+        function printSuivi(){
+          const G2b="#8B6434";
+          // Construire HTML du rapport
+          const rows=listeSuivi.map((f,i)=>`
+            <tr style="border-bottom:1px solid #f0ebe3;background:${i%2===0?"#fff":"#faf8f5"}">
+              <td style="padding:6px 8px;font-size:10px;color:#8a7040">${new Date(f.created_at).toLocaleDateString("fr-FR")}</td>
+              <td style="padding:6px 8px;font-size:10px;font-weight:700;color:#c9952a">${f.numero}</td>
+              <td style="padding:6px 8px;font-size:10px;color:#2c2416">${f.client||"—"}</td>
+              <td style="padding:6px 8px;font-size:10px;text-align:right">${(f.montant_ht||0).toFixed(3)}</td>
+              <td style="padding:6px 8px;font-size:10px;text-align:right">${(f.tva||0).toFixed(3)}</td>
+              <td style="padding:6px 8px;font-size:10px;text-align:right;font-weight:700">${(f.montant_ttc||0).toFixed(3)}</td>
+              <td style="padding:6px 8px;font-size:10px;text-align:center">${f.echeance?new Date(f.echeance).toLocaleDateString("fr-FR"):"—"}</td>
+              <td style="padding:6px 8px;font-size:10px;text-align:center">
+                <span style="background:${f.paid?"#d4f0e0":"#fad4d4"};color:${f.paid?"#2d7a4f":"#9a2020"};padding:2px 6px;border-radius:8px;font-size:9px;font-weight:700">
+                  ${f.paid?"✓ Payé":"À encaisser"}
+                </span>
+              </td>
+            </tr>
+          `).join("");
+          const html=`
+            <html><head><meta charset="UTF-8"/>
+            <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000;padding:14mm 16mm}@page{size:A4 portrait;margin:0}@media print{body{padding:14mm 16mm}}</style>
+            </head><body>
+            <div style="border-bottom:2px solid ${G2b};padding-bottom:12px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start">
+              <div>
+                <p style="font-size:11px;font-weight:700;color:#2c2416">Société Hedi pour les services touristiques — SHST</p>
+                <p style="font-size:16px;font-weight:800;color:${G2b};letter-spacing:1px">IMPAVID HOTEL</p>
+                <p style="font-size:9px;color:#6a5a45">Rue Jamel Abdelnasser, Gabès 6000 · MF : 1661336G · Tél/Fax : 75 220 856</p>
+              </div>
+              <div style="text-align:right">
+                <p style="font-size:14px;font-weight:800;color:#2c2416">SUIVI DES FACTURES</p>
+                <p style="font-size:10px;color:#8a7a65;margin-top:4px">Période : ${du?new Date(du).toLocaleDateString("fr-FR"):"début"} → ${au?new Date(au).toLocaleDateString("fr-FR"):"fin"}</p>
+                <p style="font-size:10px;color:#8a7a65">Édité le ${new Date().toLocaleDateString("fr-FR")}</p>
+              </div>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:16px">
+              <thead>
+                <tr style="background:#2c2416;color:#f5d984">
+                  ${["Date","N° Facture","Client","HT (TND)","TVA (TND)","TTC (TND)","Échéance","Statut"].map(h=>`<th style="padding:8px;text-align:${["HT (TND)","TVA (TND)","TTC (TND)"].includes(h)?"right":"left"};font-size:9px;letter-spacing:0.5px">${h}</th>`).join("")}
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+              <tfoot>
+                <tr style="background:#${G2b.replace("#","")};color:#fff;font-weight:700">
+                  <td colspan="3" style="padding:8px;font-size:11px">TOTAL — ${listeSuivi.length} facture${listeSuivi.length>1?"s":""}</td>
+                  <td style="padding:8px;text-align:right;font-size:11px">${totalHT.toFixed(3)}</td>
+                  <td style="padding:8px;text-align:right;font-size:11px">${totalTVA.toFixed(3)}</td>
+                  <td style="padding:8px;text-align:right;font-size:13px">${totalTTC.toFixed(3)}</td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
+            </table>
+            <p style="font-size:8px;color:#a09080;border-top:1px solid #e0d8cc;padding-top:8px">Document généré automatiquement — IMPAVID HOTEL · impavidhotel@gmail.com</p>
+            </body></html>
+          `;
+          const w=window.open("","_blank","width=900,height=700");
+          w.document.write(html);
+          w.document.close();
+          w.focus();
+          setTimeout(()=>w.print(),500);
+        }
+
+        return(
+          <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowSuivi(false)}>
+            <div className="modal" style={{maxWidth:700,fontFamily:'"Inter",sans-serif'}}>
+              {/* Titre */}
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,paddingBottom:14,borderBottom:"1px solid #f0e8d8"}}>
+                <div>
+                  <p style={{fontFamily:'"Cormorant Garamond",serif',fontSize:20,fontWeight:700,color:"#3a5fc8"}}>📊 Suivi des Factures</p>
+                  <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040",marginTop:2}}>{listeSuivi.length} facture{listeSuivi.length>1?"s":""} · Total TTC : {totalTTC.toFixed(3)} TND</p>
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button className="btn-ghost" onClick={()=>setShowSuivi(false)}>Fermer</button>
+                  <button className="btn-gold" onClick={printSuivi} disabled={listeSuivi.length===0}>🖨 Imprimer</button>
+                </div>
+              </div>
+              {/* Sélection dates */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+                <div className="form-group">
+                  <label>Du</label>
+                  <input type="date" value={suiviDu} onChange={e=>setSuiviDu(e.target.value)}/>
+                </div>
+                <div className="form-group">
+                  <label>Au</label>
+                  <input type="date" value={suiviAu} onChange={e=>setSuiviAu(e.target.value)}/>
+                </div>
+              </div>
+              {/* Résumé */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
+                {[["Total HT",totalHT.toFixed(3),"#5a7fc8","#f0f4ff"],["TVA (7%)",totalTVA.toFixed(3),"#8a7040","#faf8f5"],["Total TTC",totalTTC.toFixed(3),"#2a8a5a","#f0faf4"]].map(([l,v,c,bg])=>(
+                  <div key={l} style={{background:bg,borderRadius:8,padding:"10px 14px",border:"1px solid #e0d8cc"}}>
+                    <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color:c,textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>{l}</p>
+                    <p style={{fontFamily:'"Cormorant Garamond",serif',fontSize:18,fontWeight:700,color:"#2a1e08"}}>{v} <span style={{fontSize:11,color:"#8a7040"}}>TND</span></p>
+                  </div>
+                ))}
+              </div>
+              {/* Tableau */}
+              <div style={{maxHeight:320,overflowY:"auto",border:"1px solid #e8d8b0",borderRadius:8}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                  <thead style={{position:"sticky",top:0}}>
+                    <tr style={{background:"#2c2416"}}>
+                      {["Date","N° Facture","Client","HT","TVA","TTC","Échéance","Statut"].map((h,i)=>(
+                        <th key={h} style={{padding:"8px 8px",textAlign:i>=3&&i<=5?"right":"left",fontSize:9,fontWeight:700,color:"#f5d984",textTransform:"uppercase",letterSpacing:.5}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listeSuivi.length===0?(
+                      <tr><td colSpan={8} style={{padding:20,textAlign:"center",color:"#b0a070",fontFamily:'"Jost",sans-serif'}}>Aucune facture sur cette période</td></tr>
+                    ):listeSuivi.map((f,i)=>(
+                      <tr key={f.id} style={{borderBottom:"1px solid #f0ebe3",background:i%2===0?"#fff":"#faf8f5"}}>
+                        <td style={{padding:"7px 8px",color:"#8a7040",fontSize:10}}>{new Date(f.created_at).toLocaleDateString("fr-FR")}</td>
+                        <td style={{padding:"7px 8px",fontWeight:700,color:"#c9952a",fontSize:10}}>{f.numero}</td>
+                        <td style={{padding:"7px 8px",color:"#2c2416"}}>{f.client||"—"}</td>
+                        <td style={{padding:"7px 8px",textAlign:"right",color:"#6a5a45"}}>{(f.montant_ht||0).toFixed(3)}</td>
+                        <td style={{padding:"7px 8px",textAlign:"right",color:"#6a5a45"}}>{(f.tva||0).toFixed(3)}</td>
+                        <td style={{padding:"7px 8px",textAlign:"right",fontWeight:700,color:"#2c2416"}}>{(f.montant_ttc||0).toFixed(3)}</td>
+                        <td style={{padding:"7px 8px",textAlign:"center",fontSize:10,color:"#8a7040"}}>{f.echeance?new Date(f.echeance+"T12:00:00").toLocaleDateString("fr-FR"):"—"}</td>
+                        <td style={{padding:"7px 8px",textAlign:"center"}}>
+                          <span style={{fontSize:9,background:f.paid?"#d4f0e0":"#fad4d4",color:f.paid?"#2d7a4f":"#9a2020",padding:"2px 7px",borderRadius:8,fontWeight:700}}>
+                            {f.paid?"✓ Payé":"À encaisser"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  {listeSuivi.length>0&&(
+                    <tfoot>
+                      <tr style={{background:"#8B6434"}}>
+                        <td colSpan={3} style={{padding:"8px",fontWeight:700,color:"#fff",fontSize:11}}>TOTAL — {listeSuivi.length} facture{listeSuivi.length>1?"s":""}</td>
+                        <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:"#fff"}}>{totalHT.toFixed(3)}</td>
+                        <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:"#fff"}}>{totalTVA.toFixed(3)}</td>
+                        <td style={{padding:"8px",textAlign:"right",fontWeight:800,fontSize:13,color:"#fff"}}>{totalTTC.toFixed(3)}</td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {modalFact&&(()=>{
         const G2b="#8B6434";
 
         function ArchiveModal({fact}){
           const [editMode,setEditMode]=React.useState(false);
+          const [showCachetPrint,setShowCachetPrint]=React.useState(true);
           const [ed,setEd]=React.useState({
             client:fact.client||"",
             phone:fact.phone||"",
@@ -376,6 +539,8 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
             cin:fact.cin||"",
             notes:fact.notes||"",
             remise:fact.remise||0,
+            echeance:fact.echeance||"",
+            paid:fact.paid||false,
             lignes:(fact.lignes||[]).map(l=>({...l})),
           });
 
@@ -401,6 +566,8 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
               cin:ed.cin||null,
               notes:ed.notes||null,
               remise:parseFloat(ed.remise)||0,
+              echeance:ed.echeance||null,
+              paid:ed.paid||false,
               lignes:ed.lignes,
               montant_ht:grandHT,
               tva:tvaAmt,
@@ -431,7 +598,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                     <button className="btn-ghost" onClick={()=>setModalFact(null)}>Fermer</button>
                     {!editMode&&<button style={{fontSize:11,padding:"7px 12px",background:"#f0f4ff",border:"1.5px solid #c0cfee",color:"#3a5fc8",borderRadius:6,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontWeight:600}} onClick={()=>setEditMode(true)}>✏️ Modifier</button>}
                     {editMode&&<button style={{fontSize:11,padding:"7px 12px",background:"#f0faf4",border:"1.5px solid #a0d8b8",color:"#2a8a5a",borderRadius:6,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontWeight:600}} onClick={saveEdit}>💾 Enregistrer</button>}
-                    {editMode&&<button className="btn-ghost" onClick={()=>{setEditMode(false);setEd({client:fact.client||"",phone:fact.phone||"",email:fact.email||"",mf:fact.mf||"",cin:fact.cin||"",notes:fact.notes||"",remise:fact.remise||0,lignes:(fact.lignes||[]).map(l=>({...l}))});}}>Annuler</button>}
+                    {editMode&&<button className="btn-ghost" onClick={()=>{setEditMode(false);setEd({client:fact.client||"",phone:fact.phone||"",email:fact.email||"",mf:fact.mf||"",cin:fact.cin||"",notes:fact.notes||"",remise:fact.remise||0,echeance:fact.echeance||"",paid:fact.paid||false,lignes:(fact.lignes||[]).map(l=>({...l}))});}}>Annuler</button>}
                     {!editMode&&<button style={{fontSize:11,padding:"7px 12px",background:"#fdf0f0",border:"1.5px solid #e0a0a0",color:"#9a2020",borderRadius:6,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontWeight:600}} onClick={async()=>{
                       if(!confirm('Supprimer '+fact.numero+' ?\n\nIrréversible.')) return;
                       try{
@@ -443,7 +610,13 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                         setModalFact(null);
                       }catch(e){alert('Erreur suppression');}
                     }}>🗑 Supprimer</button>}
-                    {!editMode&&<button className="btn-gold" onClick={()=>doPrint({...fact,lignes:fact.lignes,showCachet:true})}>🖨 Imprimer</button>}
+                    {!editMode&&(
+                      <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontSize:12,color:"#6a5530",userSelect:"none"}}>
+                        <input type="checkbox" checked={showCachetPrint} onChange={e=>setShowCachetPrint(e.target.checked)} style={{width:14,height:14}}/>
+                        🏷 Cachet
+                      </label>
+                    )}
+                    {!editMode&&<button className="btn-gold" onClick={()=>doPrint({...fact,lignes:fact.lignes,showCachet:showCachetPrint})}>🖨 Imprimer</button>}
                   </div>
                 </div>
 
@@ -461,6 +634,14 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                         <label style={{display:"block",fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:3,fontFamily:'"Jost",sans-serif'}}>Remise %</label>
                         <input type="number" min="0" max="100" value={ed.remise} onChange={e=>setEd(x=>({...x,remise:e.target.value}))} style={{width:"100%",fontSize:12,padding:"6px 10px"}}/>
                       </div>
+                      <div>
+                        <label style={{display:"block",fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:3,fontFamily:'"Jost",sans-serif'}}>Échéance</label>
+                        <input type="date" value={ed.echeance} onChange={e=>setEd(x=>({...x,echeance:e.target.value}))} style={{width:"100%",fontSize:12,padding:"6px 10px"}}/>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#faf8f5",border:"1px solid #e0d8cc",borderRadius:8}}>
+                      <input type="checkbox" id="paidCheck" checked={ed.paid} onChange={e=>setEd(x=>({...x,paid:e.target.checked}))} style={{width:16,height:16,cursor:"pointer"}}/>
+                      <label htmlFor="paidCheck" style={{fontFamily:'"Jost",sans-serif',fontSize:13,color:"#2a1e08",cursor:"pointer",userSelect:"none"}}>✓ Facture payée</label>
                     </div>
                     <div>
                       <label style={{display:"block",fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:3,fontFamily:'"Jost",sans-serif'}}>Notes</label>
@@ -861,6 +1042,452 @@ function getEffectivePrice(r){
   return Math.round((n*prixTTC+n*extraTTC)*100)/100;
 }
 
+const CATEGORIES_CHARGES=["Électricité","Eau","Salaires","Fournitures","Téléphone","Internet","Loyer","Entretien","Blanchisserie","Alimentation","Assurance","Taxes","Autre"];
+
+function ChargesView({sb,LOGO}){
+  const {useState,useEffect}=React;
+  const G2="#8B6434";
+  const [charges,setCharges]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [modal,setModal]=useState(null); // null | "new" | "edit"
+  const [form,setForm]=useState({});
+  const [filterMois,setFilterMois]=useState(String(new Date().getMonth()+1).padStart(2,'0'));
+  const [filterAnnee,setFilterAnnee]=useState(String(new Date().getFullYear()));
+  const [filterCat,setFilterCat]=useState("all");
+  const [filterStatut,setFilterStatut]=useState("all");
+
+  const MOIS=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  const annees=Array.from({length:5},(_,i)=>String(new Date().getFullYear()-i));
+
+  useEffect(()=>{loadCharges();},[]);
+
+  async function loadCharges(){
+    setLoading(true);
+    try{
+      const{data,error}=await sb.from('charges').select('*').order('date',{ascending:false});
+      if(!error) setCharges(data||[]);
+    }catch(e){console.error(e);}
+    setLoading(false);
+  }
+
+  function openNew(){
+    setForm({date:getToday(),fournisseur:"",description:"",categorie:"Électricité",montant_ht:0,tva:0,montant_ttc:0,statut:"a_payer",notes:""});
+    setModal("new");
+  }
+
+  function openEdit(c){
+    setForm({...c});
+    setModal("edit");
+  }
+
+  async function saveCharge(){
+    if(!form.date||!form.description){alert("Date et description obligatoires");return;}
+    const payload={
+      date:form.date,
+      fournisseur:form.fournisseur||null,
+      description:form.description,
+      categorie:form.categorie||"Autre",
+      montant_ht:parseFloat(form.montant_ht)||0,
+      tva:parseFloat(form.tva)||0,
+      montant_ttc:parseFloat(form.montant_ttc)||0,
+      statut:form.statut||"a_payer",
+      notes:form.notes||null,
+    };
+    try{
+      if(modal==="new"){
+        const{error}=await sb.from('charges').insert([payload]);
+        if(error) throw error;
+      } else {
+        const{error}=await sb.from('charges').update(payload).eq('id',form.id);
+        if(error) throw error;
+      }
+      await loadCharges();
+      setModal(null);
+    }catch(e){alert("Erreur : "+e.message);}
+  }
+
+  async function deleteCharge(id){
+    if(!confirm("Supprimer cette charge ?")) return;
+    await sb.from('charges').delete().eq('id',id);
+    setCharges(prev=>prev.filter(c=>c.id!==id));
+  }
+
+  async function toggleStatut(c){
+    const newStatut=c.statut==="paye"?"a_payer":"paye";
+    await sb.from('charges').update({statut:newStatut}).eq('id',c.id);
+    setCharges(prev=>prev.map(x=>x.id===c.id?{...x,statut:newStatut}:x));
+  }
+
+  // Recalcul automatique TTC
+  function handleMontantHT(val){
+    const ht=parseFloat(val)||0;
+    const tva=Math.round(ht*0.19*1000)/1000;
+    const ttc=Math.round((ht+tva)*1000)/1000;
+    setForm(f=>({...f,montant_ht:val,tva:tva,montant_ttc:ttc}));
+  }
+
+  const liste=charges.filter(c=>{
+    const d=new Date(c.date);
+    const matchMois=!filterMois||String(d.getMonth()+1).padStart(2,'0')===filterMois;
+    const matchAnnee=!filterAnnee||String(d.getFullYear())===filterAnnee;
+    const matchCat=filterCat==="all"||c.categorie===filterCat;
+    const matchStatut=filterStatut==="all"||c.statut===filterStatut;
+    return matchMois&&matchAnnee&&matchCat&&matchStatut;
+  });
+
+  const totalTTC=Math.round(liste.reduce((a,c)=>a+(c.montant_ttc||0),0)*1000)/1000;
+  const totalPaye=Math.round(liste.filter(c=>c.statut==="paye").reduce((a,c)=>a+(c.montant_ttc||0),0)*1000)/1000;
+  const totalAPayer=Math.round((totalTTC-totalPaye)*1000)/1000;
+
+  // Couleurs catégories
+  const CAT_COLORS={
+    "Électricité":["#fef3d0","#b07d1a"],"Eau":["#d0e4f8","#1a4f8a"],
+    "Salaires":["#f0faf4","#2a8a5a"],"Fournitures":["#ead4f8","#6b35b8"],
+    "Téléphone":["#fde8e0","#e05a20"],"Internet":["#fde8e0","#e05a20"],
+    "Loyer":["#fad4d4","#9a2020"],"Entretien":["#fef3d0","#b07d1a"],
+    "Blanchisserie":["#d0e4f8","#1a4f8a"],"Alimentation":["#f0faf4","#2a8a5a"],
+    "Assurance":["#ead4f8","#6b35b8"],"Taxes":["#fad4d4","#9a2020"],"Autre":["#f5f0e8","#8a7040"],
+  };
+
+  return(
+    <div>
+      {/* Titre */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
+        <div>
+          <p className="section-title">💸 Charges</p>
+          <p className="section-sub">{liste.length} charge{liste.length>1?"s":""}</p>
+        </div>
+        <button className="btn-gold" onClick={openNew}>+ Nouvelle charge</button>
+      </div>
+
+      {/* Filtres */}
+      <div style={{background:"#fff",border:"1px solid #e8ddc8",borderRadius:10,padding:"14px 18px",display:"grid",gridTemplateColumns:"140px 140px 1fr 160px",gap:12,marginBottom:20,boxShadow:"0 1px 4px rgba(42,30,8,0.05)"}}>
+        <div>
+          <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>Mois</label>
+          <select value={filterMois} onChange={e=>setFilterMois(e.target.value)}>
+            <option value="">Tous</option>
+            {MOIS.map((m,i)=><option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>Année</label>
+          <select value={filterAnnee} onChange={e=>setFilterAnnee(e.target.value)}>
+            <option value="">Toutes</option>
+            {annees.map(a=><option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>Catégorie</label>
+          <select value={filterCat} onChange={e=>setFilterCat(e.target.value)}>
+            <option value="all">Toutes</option>
+            {CATEGORIES_CHARGES.map(c=><option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>Statut</label>
+          <select value={filterStatut} onChange={e=>setFilterStatut(e.target.value)}>
+            <option value="all">Tous</option>
+            <option value="paye">✓ Payé</option>
+            <option value="a_payer">À payer</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Résumé */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:20}}>
+        {[
+          {label:"Total charges",val:totalTTC.toFixed(3)+" TND",color:"#c95050",bg:"#fdf0f0",border:"#e0a0a0"},
+          {label:"Payé",val:totalPaye.toFixed(3)+" TND",color:"#2a8a5a",bg:"#f0faf4",border:"#a0d8b8"},
+          {label:"À payer",val:totalAPayer.toFixed(3)+" TND",color:"#b07d1a",bg:"#fef9f0",border:"#e8d8b0"},
+        ].map(({label,val,color,bg,border})=>(
+          <div key={label} style={{background:bg,border:"1.5px solid "+border,borderRadius:10,padding:"14px 18px"}}>
+            <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color,textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>{label}</p>
+            <p style={{fontFamily:'"Cormorant Garamond",serif',fontSize:22,fontWeight:700,color:"#2a1e08"}}>{val}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tableau */}
+      {loading?(
+        <p style={{textAlign:"center",padding:40,fontFamily:'"Jost",sans-serif',color:"#8a7040"}}>Chargement…</p>
+      ):(
+        <div style={{background:"#fff",border:"1px solid #e8ddc8",borderRadius:10,overflow:"hidden",boxShadow:"0 2px 8px rgba(42,30,8,0.06)"}}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead>
+              <tr style={{background:"#fef9f0",borderBottom:"1px solid #f0e8d8"}}>
+                {["Date","Catégorie","Description","Fournisseur","HT","TVA","TTC","Statut","Actions"].map(h=>(
+                  <th key={h} style={{padding:"10px 12px",textAlign:["HT","TVA","TTC"].includes(h)?"right":"left",fontFamily:'"Jost",sans-serif',fontSize:9,letterSpacing:1.5,color:"#8a7040",textTransform:"uppercase",fontWeight:600}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {liste.length===0&&<tr><td colSpan={9} style={{padding:40,textAlign:"center",color:"#b0a070",fontFamily:'"Jost",sans-serif',fontSize:14}}>Aucune charge enregistrée</td></tr>}
+              {liste.map((c,i)=>{
+                const [bg,color]=CAT_COLORS[c.categorie]||["#f5f0e8","#8a7040"];
+                return(
+                  <tr key={c.id} style={{borderBottom:"1px solid #f5f0e8",background:i%2===0?"#fff":"#faf8f5"}}>
+                    <td style={{padding:"10px 12px",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040"}}>{new Date(c.date+"T12:00:00").toLocaleDateString("fr-FR")}</td>
+                    <td style={{padding:"10px 12px"}}>
+                      <span style={{fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:10,background:bg,color}}>{c.categorie}</span>
+                    </td>
+                    <td style={{padding:"10px 12px",fontWeight:500,color:"#2a1e08"}}>{c.description}</td>
+                    <td style={{padding:"10px 12px",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040"}}>{c.fournisseur||"—"}</td>
+                    <td style={{padding:"10px 12px",textAlign:"right",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#6a5a45"}}>{(c.montant_ht||0).toFixed(3)}</td>
+                    <td style={{padding:"10px 12px",textAlign:"right",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#6a5a45"}}>{(c.tva||0).toFixed(3)}</td>
+                    <td style={{padding:"10px 12px",textAlign:"right",fontWeight:700,color:"#2a1e08"}}>{(c.montant_ttc||0).toFixed(3)}</td>
+                    <td style={{padding:"10px 12px"}}>
+                      <button onClick={()=>toggleStatut(c)} style={{fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:10,border:"none",cursor:"pointer",background:c.statut==="paye"?"#d4f0e0":"#fad4d4",color:c.statut==="paye"?"#2d7a4f":"#9a2020"}}>
+                        {c.statut==="paye"?"✓ Payé":"À payer"}
+                      </button>
+                    </td>
+                    <td style={{padding:"10px 12px"}}>
+                      <div style={{display:"flex",gap:6}}>
+                        <button onClick={()=>openEdit(c)} style={{background:"#fef9f0",border:"1.5px solid #d4c5a0",color:"#6a5530",borderRadius:6,padding:"5px 10px",cursor:"pointer",fontSize:11,fontFamily:'"Jost",sans-serif',fontWeight:600}}>✏️</button>
+                        <button onClick={()=>deleteCharge(c.id)} style={{background:"#fdf0f0",border:"1.5px solid #e0a0a0",color:"#9a2020",borderRadius:6,padding:"5px 10px",cursor:"pointer",fontSize:11}}>🗑</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Modal nouvelle/édition charge */}
+      {modal&&(
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(null)}>
+          <div className="modal" style={{maxWidth:500,fontFamily:'"Inter",sans-serif'}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,paddingBottom:14,borderBottom:"1px solid #f0e8d8"}}>
+              <p style={{fontFamily:'"Cormorant Garamond",serif',fontSize:20,fontWeight:700,color:G2}}>{modal==="new"?"+ Nouvelle charge":"✏️ Modifier la charge"}</p>
+              <button className="btn-ghost" onClick={()=>setModal(null)}>Fermer</button>
+            </div>
+            <div style={{display:"grid",gap:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div className="form-group">
+                  <label>Date *</label>
+                  <input type="date" value={form.date||""} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/>
+                </div>
+                <div className="form-group">
+                  <label>Catégorie</label>
+                  <select value={form.categorie||"Autre"} onChange={e=>setForm(f=>({...f,categorie:e.target.value}))}>
+                    {CATEGORIES_CHARGES.map(c=><option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Description *</label>
+                <input value={form.description||""} onChange={e=>setForm(f=>({...f,description:e.target.value}))} placeholder="ex : Facture STEG Avril 2026"/>
+              </div>
+              <div className="form-group">
+                <label>Fournisseur</label>
+                <input value={form.fournisseur||""} onChange={e=>setForm(f=>({...f,fournisseur:e.target.value}))} placeholder="ex : STEG, SONEDE, …"/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+                <div className="form-group">
+                  <label>Montant HT</label>
+                  <input type="number" value={form.montant_ht||""} onChange={e=>handleMontantHT(e.target.value)} placeholder="0.000"/>
+                </div>
+                <div className="form-group">
+                  <label>TVA</label>
+                  <input type="number" value={form.tva||""} onChange={e=>setForm(f=>({...f,tva:e.target.value,montant_ttc:Math.round(((parseFloat(form.montant_ht)||0)+(parseFloat(e.target.value)||0))*1000)/1000}))} placeholder="0.000"/>
+                </div>
+                <div className="form-group">
+                  <label>Montant TTC</label>
+                  <input type="number" value={form.montant_ttc||""} onChange={e=>setForm(f=>({...f,montant_ttc:e.target.value}))} placeholder="0.000" style={{fontWeight:700}}/>
+                </div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div className="form-group">
+                  <label>Statut</label>
+                  <select value={form.statut||"a_payer"} onChange={e=>setForm(f=>({...f,statut:e.target.value}))}>
+                    <option value="a_payer">À payer</option>
+                    <option value="paye">✓ Payé</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Notes</label>
+                  <input value={form.notes||""} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Remarques…"/>
+                </div>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:20}}>
+              <button className="btn-ghost" onClick={()=>setModal(null)}>Annuler</button>
+              <button className="btn-gold" onClick={saveCharge}>💾 Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LivreDePolice({reservations,ROOMS,LOGO}){
+  const {useState}=React;
+  const [filterDu,setFilterDu]=useState("");
+  const [filterAu,setFilterAu]=useState("");
+  const [search,setSearch]=useState("");
+
+  const liste=reservations.filter(r=>{
+    if(["blocked","cancelled"].includes(r.status)) return false;
+    const matchDu=!filterDu||r.checkin>=filterDu;
+    const matchAu=!filterAu||r.checkin<=filterAu;
+    const term=search.toLowerCase().trim();
+    const matchSearch=!term||
+      (r.guest||"").toLowerCase().includes(term)||
+      (r.cin||"").toLowerCase().includes(term)||
+      (r.passport||"").toLowerCase().includes(term)||
+      (r.nationality||"").toLowerCase().includes(term)||
+      (r.provenance||"").toLowerCase().includes(term);
+    return matchDu&&matchAu&&matchSearch;
+  }).sort((a,b)=>b.checkin.localeCompare(a.checkin));
+
+  function printPolice(){
+    const G2b="#8B6434";
+    // Construire toutes les lignes — titulaire + accompagnants
+    let rowNum=0;
+    const rows=liste.map((r,i)=>{
+      const room=ROOMS.find(x=>x.id===r.roomId);
+      const bg=i%2===0?"#fff":"#faf8f5";
+      const mainRow=`<tr style="border-bottom:1px solid #f0ebe3;background:${bg}">
+        <td style="padding:5px 6px;font-size:9px;text-align:center;color:#8a7040">${++rowNum}</td>
+        <td style="padding:5px 6px;font-size:9px;font-weight:600">${r.guest||"—"}</td>
+        <td style="padding:5px 6px;font-size:9px">${r.nationality||"—"}</td>
+        <td style="padding:5px 6px;font-size:9px">${r.cin?r.cin:r.passport||"—"}</td>
+        <td style="padding:5px 6px;font-size:9px">${r.profession||"—"}</td>
+        <td style="padding:5px 6px;font-size:9px">${r.provenance||"—"}</td>
+        <td style="padding:5px 6px;font-size:9px;text-align:center">${new Date(r.checkin+"T12:00:00").toLocaleDateString("fr-FR")}</td>
+        <td style="padding:5px 6px;font-size:9px;text-align:center">${new Date(r.checkout+"T12:00:00").toLocaleDateString("fr-FR")}</td>
+        <td style="padding:5px 6px;font-size:9px;text-align:center;font-weight:700;color:#c9952a">${room?.number||"—"}</td>
+      </tr>`;
+      const accRows=(r.accompagnants||[]).map(acc=>`
+        <tr style="border-bottom:1px solid #f0ebe3;background:${bg}">
+          <td style="padding:5px 6px;font-size:9px;text-align:center;color:#b0a070">${++rowNum}</td>
+          <td style="padding:5px 6px;font-size:9px;color:#555">${acc.nom||"—"}</td>
+          <td style="padding:5px 6px;font-size:9px">${acc.nationalite||"—"}</td>
+          <td style="padding:5px 6px;font-size:9px">${acc.cin||acc.passport||"—"}</td>
+          <td style="padding:5px 6px;font-size:9px">${acc.profession||"—"}</td>
+          <td style="padding:5px 6px;font-size:9px">${acc.provenance||"—"}</td>
+          <td style="padding:5px 6px;font-size:9px;text-align:center">${new Date(r.checkin+"T12:00:00").toLocaleDateString("fr-FR")}</td>
+          <td style="padding:5px 6px;font-size:9px;text-align:center">${new Date(r.checkout+"T12:00:00").toLocaleDateString("fr-FR")}</td>
+          <td style="padding:5px 6px;font-size:9px;text-align:center;color:#c9952a">${room?.number||"—"}</td>
+        </tr>`).join("");
+      return mainRow+accRows;
+    }).join("");
+    const html=`<html><head><meta charset="UTF-8"/>
+    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Inter",Arial,sans-serif;font-size:9pt;color:#000;padding:10mm 12mm}@page{size:A4 landscape;margin:0}table{width:100%;border-collapse:collapse}</style>
+    </head><body>
+    <div style="border-bottom:2px solid ${G2b};padding-bottom:10px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <p style="font-size:10px;font-weight:700;color:#2c2416">Société Hedi pour les services touristiques — SHST</p>
+        <p style="font-size:15px;font-weight:800;color:${G2b};letter-spacing:1px">IMPAVID HOTEL — LIVRE DE POLICE</p>
+        <p style="font-size:9px;color:#6a5a45">Rue Jamel Abdelnasser, Gabès 6000 · MF : 1661336G · Tél/Fax : 75 220 856</p>
+      </div>
+      <div style="text-align:right">
+        <p style="font-size:10px;color:#8a7a65">Période : ${filterDu?new Date(filterDu).toLocaleDateString("fr-FR"):"début"} → ${filterAu?new Date(filterAu).toLocaleDateString("fr-FR"):"fin"}</p>
+        <p style="font-size:10px;color:#8a7a65">Édité le ${new Date().toLocaleDateString("fr-FR")}</p>
+        <p style="font-size:11px;font-weight:700;color:#2c2416;margin-top:4px">${liste.length} enregistrement${liste.length>1?"s":""}</p>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr style="background:#2c2416;color:#f5d984">
+          ${["N°","Nom & Prénom","Nationalité","CIN / Passeport","Profession","Provenance","Arrivée","Départ","Chambre"].map(h=>`<th style="padding:7px 6px;font-size:8px;text-align:left;letter-spacing:0.5px">${h}</th>`).join("")}
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="font-size:7px;color:#a09080;border-top:1px solid #e0d8cc;padding-top:6px;margin-top:12px">Document officiel — IMPAVID HOTEL · impavidhotel@gmail.com · Gabès</p>
+    </body></html>`;
+    const w=window.open("","_blank","width=1100,height=700");
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(()=>w.print(),500);
+  }
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
+        <div>
+          <p className="section-title">📋 Livre de Police</p>
+          <p className="section-sub">{liste.length} enregistrement{liste.length>1?"s":""}</p>
+        </div>
+        <button className="btn-gold" onClick={printPolice}>🖨 Imprimer le registre</button>
+      </div>
+
+      {/* Filtres */}
+      <div style={{background:"#fff",border:"1px solid #e8ddc8",borderRadius:10,padding:"14px 18px",display:"grid",gridTemplateColumns:"1fr 160px 160px",gap:12,marginBottom:20,boxShadow:"0 1px 4px rgba(42,30,8,0.05)"}}>
+        <div>
+          <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>🔍 Rechercher</label>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nom, CIN, passeport, nationalité…" style={{width:"100%"}}/>
+        </div>
+        <div>
+          <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>Arrivée du</label>
+          <input type="date" value={filterDu} onChange={e=>setFilterDu(e.target.value)} style={{width:"100%"}}/>
+        </div>
+        <div>
+          <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>Arrivée au</label>
+          <input type="date" value={filterAu} onChange={e=>setFilterAu(e.target.value)} style={{width:"100%"}}/>
+        </div>
+      </div>
+
+      {/* Tableau */}
+      <div style={{background:"#fff",border:"1px solid #e8ddc8",borderRadius:10,overflow:"hidden",boxShadow:"0 2px 8px rgba(42,30,8,0.06)"}}>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",minWidth:900}}>
+            <thead>
+              <tr style={{background:"#2c2416"}}>
+                {["N°","Nom & Prénom","Nationalité","CIN / Passeport","Profession","Provenance","Arrivée","Départ","Ch."].map((h,i)=>(
+                  <th key={h} style={{padding:"10px 8px",textAlign:i===0||i>=6?"center":"left",fontSize:9,fontWeight:700,color:"#f5d984",textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {liste.length===0?(
+                <tr><td colSpan={9} style={{padding:40,textAlign:"center",color:"#b0a070",fontFamily:'"Jost",sans-serif',fontSize:14}}>Aucun enregistrement</td></tr>
+              ):liste.map((r,i)=>{
+                const room=ROOMS.find(x=>x.id===r.roomId);
+                const bg=i%2===0?"#fff":"#faf8f5";
+                return(
+                  <React.Fragment key={r.id}>
+                    {/* Ligne titulaire */}
+                    <tr style={{borderBottom:"1px solid #f0ebe3",background:bg}}>
+                      <td style={{padding:"9px 8px",textAlign:"center",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#b0a070"}}>{i+1}</td>
+                      <td style={{padding:"9px 8px",fontWeight:700,color:"#2c2416",fontSize:13}}>{r.guest||"—"}{(r.accompagnants||[]).length>0&&<span style={{fontFamily:'"Jost",sans-serif',fontSize:9,background:"#fef3d0",color:"#b07d1a",padding:"1px 6px",borderRadius:8,marginLeft:6}}>+{r.accompagnants.length}</span>}</td>
+                      <td style={{padding:"9px 8px",fontFamily:'"Jost",sans-serif',fontSize:12,color:"#6a5530"}}>{r.nationality||<span style={{color:"#c0b080"}}>—</span>}</td>
+                      <td style={{padding:"9px 8px",fontFamily:'"Jost",sans-serif',fontSize:12,color:"#6a5530"}}>{r.cin||r.passport||<span style={{color:"#c0b080"}}>—</span>}</td>
+                      <td style={{padding:"9px 8px",fontFamily:'"Jost",sans-serif',fontSize:12,color:"#6a5530"}}>{r.profession||<span style={{color:"#c0b080"}}>—</span>}</td>
+                      <td style={{padding:"9px 8px",fontFamily:'"Jost",sans-serif',fontSize:12,color:"#6a5530"}}>{r.provenance||<span style={{color:"#c0b080"}}>—</span>}</td>
+                      <td style={{padding:"9px 8px",textAlign:"center",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040"}}>{new Date(r.checkin+"T12:00:00").toLocaleDateString("fr-FR")}</td>
+                      <td style={{padding:"9px 8px",textAlign:"center",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040"}}>{new Date(r.checkout+"T12:00:00").toLocaleDateString("fr-FR")}</td>
+                      <td style={{padding:"9px 8px",textAlign:"center",fontWeight:700,color:"#c9952a",fontSize:13}}>{room?.number||"—"}</td>
+                    </tr>
+                    {/* Lignes accompagnants */}
+                    {(r.accompagnants||[]).map((acc,j)=>(
+                      <tr key={j} style={{borderBottom:"1px solid #f0ebe3",background:bg}}>
+                        <td style={{padding:"7px 8px",textAlign:"center",fontFamily:'"Jost",sans-serif',fontSize:10,color:"#c0b080"}}>↳</td>
+                        <td style={{padding:"7px 8px",fontFamily:'"Jost",sans-serif',fontSize:12,color:"#555"}}>{acc.nom||"—"}</td>
+                        <td style={{padding:"7px 8px",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#6a5530"}}>{acc.nationalite||<span style={{color:"#c0b080"}}>—</span>}</td>
+                        <td style={{padding:"7px 8px",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#6a5530"}}>{acc.cin||acc.passport||<span style={{color:"#c0b080"}}>—</span>}</td>
+                        <td style={{padding:"7px 8px",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#6a5530"}}>{acc.profession||<span style={{color:"#c0b080"}}>—</span>}</td>
+                        <td style={{padding:"7px 8px",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#6a5530"}}>{acc.provenance||<span style={{color:"#c0b080"}}>—</span>}</td>
+                        <td style={{padding:"7px 8px",textAlign:"center",fontFamily:'"Jost",sans-serif',fontSize:10,color:"#b0a070"}}>{new Date(r.checkin+"T12:00:00").toLocaleDateString("fr-FR")}</td>
+                        <td style={{padding:"7px 8px",textAlign:"center",fontFamily:'"Jost",sans-serif',fontSize:10,color:"#b0a070"}}>{new Date(r.checkout+"T12:00:00").toLocaleDateString("fr-FR")}</td>
+                        <td style={{padding:"7px 8px",textAlign:"center",color:"#c9952a"}}>{room?.number||"—"}</td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App({user,onLogout}){
   const [view,setView]=useState("dashboard");
   const [reservations,setReservations]=useState([]);
@@ -1199,6 +1826,8 @@ function App({user,onLogout}){
             ["reservations","📋","Réservations"],
             ["historique","📒","Historique"],
             ["archives","📁","Archives"],
+            ["police","📋","Livre de Police"],
+            ["charges","💸","Charges"],
             ["menage","🧹","Ménage"],
             ["linge","🧺","Linge"],
             ["resources","👥","Ressources"],
@@ -1254,7 +1883,7 @@ function App({user,onLogout}){
                 {label:"Chambres Occupées",value:occupiedRooms.length,total:"/20",color:"#1a4f8a",bg:"#d0e4f8"},
                 {label:"Chambres Libres",value:freeRooms.length,total:"/20",color:"#2d7a4f",bg:"#d4f0e0"},
                 {label:"En Attente",value:reservations.filter(r=>r.status==="pending").length,total:" résa",color:"#b07d1a",bg:"#fef3d0"},
-                {label:"Revenus payés",value:FMT(reservations.filter(r=>r.paid).reduce((a,r)=>a+total(r),0)),total:"",color:"#c9952a",bg:"#fef3d0"},
+                {label:"Revenus payés",value:FMT(reservations.filter(r=>r.paid).reduce((a,r)=>a+getEffectivePrice(r),0)),total:"",color:"#c9952a",bg:"#fef3d0"},
               ].map((s,i)=>(
                 <div key={i} className="stat-card" style={{borderTop:"3px solid "+s.color}}>
                   <p style={{fontFamily:'"Jost",sans-serif',fontSize:10,letterSpacing:2,color:"#8a7040",textTransform:"uppercase",marginBottom:8,fontWeight:600}}>{s.label}</p>
@@ -1399,7 +2028,7 @@ function App({user,onLogout}){
                             <p style={{fontSize:16,fontWeight:500}}>{r.guest}</p>
                             {r.claim&&<span style={{fontFamily:'"Jost",sans-serif',fontSize:11,background:"#fad4d4",color:"#9a2020",padding:"2px 8px",borderRadius:10}}>⚠</span>}
                           </div>
-                          <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#8a7040"}}>Ch. {room?.number} · {FMT(total(r))}</p>
+                          <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#8a7040"}}>Ch. {room?.number} · {FMT(getEffectivePrice(r))}</p>
                         </div>
                         <span className="badge" style={{background:r.paid?"#d4f0e0":"#fad4d4",color:r.paid?"#2d7a4f":"#9a2020"}}>{r.paid?"✓ Payé":"À encaisser"}</span>
                       </div>
@@ -1928,6 +2557,8 @@ function App({user,onLogout}){
 
         {/* ── ARCHIVES FACTURES ── */}
         {view==="archives"&&<ArchivesView sb={sb} openDetail={openDetail} ROOMS={ROOMS} LOGO={LOGO} G2="#8B6434" doPrint={doPrint} setModal={setModal}/>}
+        {view==="police"&&<LivreDePolice reservations={reservations} ROOMS={ROOMS} LOGO={LOGO}/>}
+        {view==="charges"&&<ChargesView sb={sb} LOGO={LOGO}/>}
 
         {/* ── MÉNAGE ── */}
         {view==="menage"&&(()=>{
@@ -2356,6 +2987,70 @@ function App({user,onLogout}){
                   <div className="form-group"><label>Téléphone</label><input value={form.phone||""} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="xx xxx xxx"/></div>
                 </div>
                 <div className="form-grid">
+                  <div className="form-group">
+                    <label>Nationalité</label>
+                    <input value={form.nationality||""} onChange={e=>setForm(f=>({...f,nationality:e.target.value}))} placeholder="ex : Tunisienne, Française…"/>
+                  </div>
+                  <div className="form-group">
+                    <label style={{display:"flex",alignItems:"center",gap:6}}>
+                      N° Passeport
+                      <span style={{fontSize:9,fontWeight:600,color:"#a09080",background:"#f5f0e8",padding:"1px 6px",borderRadius:8,textTransform:"uppercase",letterSpacing:.5}}>étrangers</span>
+                    </label>
+                    <input value={form.passport||""} onChange={e=>setForm(f=>({...f,passport:e.target.value}))} placeholder="ex : AB123456"/>
+                  </div>
+                </div>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Profession</label>
+                    <input value={form.profession||""} onChange={e=>setForm(f=>({...f,profession:e.target.value}))} placeholder="ex : Ingénieur, Médecin…"/>
+                  </div>
+                  <div className="form-group">
+                    <label>Provenance</label>
+                    <input value={form.provenance||""} onChange={e=>setForm(f=>({...f,provenance:e.target.value}))} placeholder="ex : Tunis, Paris, Sousse…"/>
+                  </div>
+                </div>
+
+                {/* Accompagnants — affiché si adults > 1 */}
+                {parseInt(form.adults||1)>1&&(
+                  <div style={{background:"#faf8f5",border:"1px solid #e8d8b0",borderRadius:8,padding:"14px 16px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                      <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:1}}>👥 Accompagnants ({parseInt(form.adults||1)-1})</p>
+                      <button type="button" onClick={()=>{
+                        const acc=[...(form.accompagnants||[])];
+                        acc.push({nom:"",nationalite:"",cin:"",passport:"",profession:"",provenance:""});
+                        setForm(f=>({...f,accompagnants:acc}));
+                      }} style={{fontFamily:'"Jost",sans-serif',fontSize:11,background:"#fff",border:"1px dashed #c0b080",color:"#8a7040",padding:"4px 12px",borderRadius:5,cursor:"pointer"}}>+ Ajouter</button>
+                    </div>
+                    {(form.accompagnants||[]).length===0&&(
+                      <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#b0a070",textAlign:"center",padding:"8px 0"}}>Cliquez "+ Ajouter" pour saisir les infos des accompagnants</p>
+                    )}
+                    {(form.accompagnants||[]).map((acc,idx)=>(
+                      <div key={idx} style={{background:"#fff",border:"1px solid #e0d0b0",borderRadius:6,padding:"10px 12px",marginBottom:8}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                          <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,fontWeight:700,color:"#c9952a"}}>Personne {idx+2}</p>
+                          <button type="button" onClick={()=>{
+                            const a=[...(form.accompagnants||[])];
+                            a.splice(idx,1);
+                            setForm(f=>({...f,accompagnants:a}));
+                          }} style={{background:"#fdf0f0",border:"1px solid #e0a0a0",color:"#9a2020",borderRadius:4,padding:"2px 8px",cursor:"pointer",fontSize:11}}>✕</button>
+                        </div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                          {[["Nom & Prénom","nom","ex : Ben Ali Mohamed"],["Nationalité","nationalite","ex : Tunisienne"],["CIN","cin","ex : 12345678"],["Passeport","passport","ex : AB123456"],["Profession","profession","ex : Ingénieur"],["Provenance","provenance","ex : Sfax"]].map(([lbl,key,ph])=>(
+                            <div key={key}>
+                              <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>{lbl}</label>
+                              <input value={acc[key]||""} onChange={e=>{
+                                const a=[...(form.accompagnants||[])];
+                                a[idx]={...a[idx],[key]:e.target.value};
+                                setForm(f=>({...f,accompagnants:a}));
+                              }} placeholder={ph} style={{width:"100%",fontSize:11,padding:"5px 8px"}}/>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="form-grid">
                   <div className="form-group"><label>Arrivée *</label><input type="date" value={form.checkin||""} onChange={e=>setForm(f=>({...f,checkin:e.target.value}))}/></div>
                   <div className="form-group"><label>Départ *</label><input type="date" value={form.checkout||""} onChange={e=>setForm(f=>({...f,checkout:e.target.value}))}/></div>
                 </div>
@@ -2693,12 +3388,21 @@ function App({user,onLogout}){
             const r=modal.data;
             const G2="#8B6434";
             const n=nights(r.checkin,r.checkout);
-            // Générer une date par nuit : nuit 1 = checkin, nuit 2 = checkin+1, etc.
-            const nuits=Array.from({length:n},(_,i)=>{
+            const acc=r.accompagnants||[];
+            const totalPersonnes=1+acc.length; // titulaire + accompagnants
+            // Générer tous les bons : pour chaque nuit, un bon par personne
+            const tousLesBons=[];
+            Array.from({length:n},(_,i)=>{
               const d=new Date(r.checkin+"T12:00:00");
               d.setDate(d.getDate()+i);
-              return d.toISOString().split("T")[0];
+              const dateStr=d.toISOString().split("T")[0];
+              // Titulaire
+              tousLesBons.push({date:dateStr,guest:r.guest});
+              // Accompagnants
+              acc.forEach(a=>{if(a.nom) tousLesBons.push({date:dateStr,guest:a.nom});});
             });
+            const totalBons=tousLesBons.length;
+
             function BonRestaurantModal(){
               const [repas,setRepas]=React.useState("diner");
               const [showCachet,setShowCachet]=React.useState(true);
@@ -2709,11 +3413,11 @@ function App({user,onLogout}){
                   repas,
                   showCachet,
                   pension:"DP — Demi Pension",
-                  nuits, // tableau de dates
+                  bons:tousLesBons, // nouveau format avec guest par bon
                 });
               }
               return(
-                <div className="modal" style={{maxWidth:440,fontFamily:'"Inter",sans-serif'}}>
+                <div className="modal" style={{maxWidth:460,fontFamily:'"Inter",sans-serif'}}>
                   <div style={{borderBottom:"2px solid "+G2,paddingBottom:14,marginBottom:18,display:"flex",alignItems:"center",gap:14}}>
                     <img src={LOGO} alt="" style={{height:44,width:44,objectFit:"cover",borderRadius:6,border:"1px solid #e0d8cc"}}/>
                     <div>
@@ -2722,10 +3426,10 @@ function App({user,onLogout}){
                     </div>
                   </div>
                   <div style={{display:"grid",gap:14,marginBottom:20}}>
-                    {/* Infos client */}
+                    {/* Infos */}
                     <div style={{background:"#faf8f5",border:"1px solid #e0d8cc",borderRadius:8,padding:"12px 16px"}}>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                        {[["Client",r.guest],["Pension","Demi-Pension (DP)"],["Séjour",new Date(r.checkin).toLocaleDateString("fr-FR")+" → "+new Date(r.checkout).toLocaleDateString("fr-FR")],["Nuits",n+" bon"+(n>1?"s":"")+" à imprimer"]].map(([lbl,val])=>(
+                        {[["Client",r.guest],["Pension","Demi-Pension (DP)"],["Séjour",new Date(r.checkin).toLocaleDateString("fr-FR")+" → "+new Date(r.checkout).toLocaleDateString("fr-FR")],["Total bons",totalBons+" bon"+(totalBons>1?"s":"")+" ("+n+" nuit"+(n>1?"s":"")+" × "+totalPersonnes+" pers.)"]].map(([lbl,val])=>(
                           <div key={lbl}>
                             <p style={{fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:2}}>{lbl}</p>
                             <p style={{fontSize:13,fontWeight:600,color:"#2c2416"}}>{val}</p>
@@ -2733,14 +3437,15 @@ function App({user,onLogout}){
                         ))}
                       </div>
                     </div>
-                    {/* Dates générées */}
+                    {/* Aperçu bons par nuit */}
                     <div>
                       <p style={{fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Bons générés</p>
-                      <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                        {nuits.map((d,i)=>(
-                          <div key={d} style={{display:"flex",alignItems:"center",gap:8,background:"#fef9f0",border:"1px solid #e8d8b0",borderRadius:6,padding:"6px 10px"}}>
-                            <span style={{fontFamily:'"Jost",sans-serif',fontSize:11,fontWeight:700,color:"#c9952a",minWidth:20}}>#{i+1}</span>
-                            <span style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#2c2416"}}>{new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</span>
+                      <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:200,overflowY:"auto"}}>
+                        {tousLesBons.map((b,i)=>(
+                          <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:"#fef9f0",border:"1px solid #e8d8b0",borderRadius:6,padding:"5px 10px"}}>
+                            <span style={{fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#c9952a",minWidth:22}}>#{i+1}</span>
+                            <span style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#2c2416",fontWeight:600,minWidth:120}}>{b.guest}</span>
+                            <span style={{fontFamily:'"Jost",sans-serif',fontSize:10,color:"#8a7040"}}>{new Date(b.date+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}</span>
                           </div>
                         ))}
                       </div>
@@ -2759,7 +3464,7 @@ function App({user,onLogout}){
                   </div>
                   <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
                     <button className="btn-outline" onClick={()=>setModal({type:"detail",data:r})}>← Retour</button>
-                    <button className="btn-gold" onClick={printBons}>🖨 Imprimer {n} bon{n>1?"s":""}</button>
+                    <button className="btn-gold" onClick={printBons}>🖨 Imprimer {totalBons} bon{totalBons>1?"s":""}</button>
                   </div>
                 </div>
               );
@@ -2769,6 +3474,8 @@ function App({user,onLogout}){
 
           {/* FACTURE */}
           {modal.type==="invoice"&&(()=>{
+            function InvoiceModal(){
+            const [showCachet,setShowCachet]=React.useState(true);
             const r=modal.data;
             const room=ROOMS.find(rm=>rm.id===r.roomId);
             const n=nights(r.checkin,r.checkout);
@@ -2917,9 +3624,15 @@ function App({user,onLogout}){
                 <p style={{fontSize:10,color:"#a09080",borderTop:"1px solid #f0ebe3",paddingTop:12}}>
                   Arrêtée la présente facture à la somme de : <strong>{montantEnLettres(Math.round((totalApresRemise+1)*100)/100)}</strong>
                 </p>
-                <SignatureBlock/>
+                <SignatureBlock showCachet={showCachet}/>
 
-                <div className="no-print" style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:16,borderTop:"1px solid #f0ebe3",paddingTop:14}}>
+                <div className="no-print" style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginTop:16,borderTop:"1px solid #f0ebe3",paddingTop:14}}>
+                  {/* Toggle cachet */}
+                  <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontSize:12,color:"#6a5530",userSelect:"none"}}>
+                    <input type="checkbox" checked={showCachet} onChange={e=>setShowCachet(e.target.checked)} style={{width:15,height:15,cursor:"pointer"}}/>
+                    🏷 Avec cachet
+                  </label>
+                  <div style={{display:"flex",gap:8}}>
                   <button className="btn-ghost" onClick={closeModal}>Fermer</button>
                   {!modal.saved?(
                     <button className="btn-gold" onClick={async()=>{
@@ -2956,11 +3669,12 @@ function App({user,onLogout}){
                     if(!modal.saved) return;
                     const lignes=[{code:room?.type||"",desc:"Chambre "+room?.number+" × "+n+" nuits",qty:n,prixTTC:prixTTC}];
                     if(r.extraBed) lignes.push({code:"",desc:"Lit supplémentaire × "+n+" nuits",qty:n,prixTTC:30});
-                    doPrint({numero:"F-"+modal.invNum,type:"reservation",client:r.guest,phone:r.phone,email:r.email,cin:r.cin,montant_ht:totalHT,tva:tvaAmt,montant_ttc:Math.round((totalApresRemise+1)*100)/100,remise:remisePrint,notes:r.notes,lignes,created_at:new Date()});
+                    doPrint({numero:"F-"+modal.invNum,type:"reservation",client:r.guest,phone:r.phone,email:r.email,cin:r.cin,montant_ht:totalHT,tva:tvaAmt,montant_ttc:Math.round((totalApresRemise+1)*100)/100,remise:remisePrint,notes:r.notes,lignes,created_at:new Date(),showCachet});
                   }}>🖨 Imprimer</button>
+                  </div>
                 </div>
               </div>
-            );
+            );} return <InvoiceModal/>;
           })()}
 
           {/* FACTURE LIBRE */}
@@ -2968,27 +3682,104 @@ function App({user,onLogout}){
             const fi=freeInvoice;
             const setFI=fn=>setFreeInvoice(f=>fn(f));
             const G2="#8B6434";
-            const lines=fi.lines.map(l=>{
-              const ttc=parseFloat(l.prixTTC)||0;
-              const ht=Math.round((ttc/1.07)*1000)/1000;
-              const qty=parseFloat(l.qty)||1;
-              return{...l,prixHT:ht,prixTTC:ttc,totalHT:Math.round(qty*ht*100)/100,totalTTC:Math.round(qty*ttc*100)/100};
-            });
-            const grandTTC=Math.round(lines.reduce((a,l)=>a+l.totalTTC,0)*100)/100;
-            const grandHT=Math.round(lines.reduce((a,l)=>a+l.totalHT,0)*100)/100;
-            const tvaAmt=Math.round((grandTTC-grandHT)*100)/100;
-            const remise=parseFloat(fi.remise)||0;
-            const remiseMont=Math.round(grandTTC*(remise/100)*100)/100;
-            const avantTimbre=Math.round((grandTTC-remiseMont)*100)/100;
-            const timbre=1;
-            const netAPayer=Math.round((avantTimbre+timbre)*100)/100;
-            const invNum=fi.invNum||"00000";
-            return(
-              <div className="modal" style={{maxWidth:660,fontFamily:'"Inter",sans-serif'}}>
 
-                {/* ── FORMULAIRE (masqué à l'impression) ── */}
+            // ── Composant avec annuaire clients ──
+            function FreeInvoiceModal(){
+              const [clients,setClients]=React.useState([]);
+              const [clientSearch,setClientSearch]=React.useState("");
+              const [showSuggestions,setShowSuggestions]=React.useState(false);
+              const [savingClient,setSavingClient]=React.useState(false);
+
+              React.useEffect(()=>{
+                sb.from('clients').select('*').order('nom').then(({data})=>setClients(data||[]));
+              },[]);
+
+              const suggestions=clientSearch.length>=2?clients.filter(c=>
+                c.nom.toLowerCase().includes(clientSearch.toLowerCase())||
+                (c.mf||"").toLowerCase().includes(clientSearch.toLowerCase())||
+                (c.phone||"").includes(clientSearch)
+              ):[];
+
+              function selectClient(c){
+                setFI(f=>({...f,client:c.nom,phone:c.phone||"",email:c.email||"",mf:c.mf||"",cin:c.cin||""}));
+                setClientSearch("");
+                setShowSuggestions(false);
+              }
+
+              async function saveClient(){
+                if(!fi.client) return;
+                setSavingClient(true);
+                try{
+                  const existing=clients.find(c=>c.nom.toLowerCase()===fi.client.toLowerCase());
+                  if(existing){
+                    await sb.from('clients').update({phone:fi.phone||null,email:fi.email||null,mf:fi.mf||null}).eq('id',existing.id);
+                  } else {
+                    await sb.from('clients').insert([{nom:fi.client,phone:fi.phone||null,email:fi.email||null,mf:fi.mf||null}]);
+                  }
+                  const {data}=await sb.from('clients').select('*').order('nom');
+                  setClients(data||[]);
+                  alert('Client "'+(fi.client)+'" sauvegardé ✓');
+                }catch(e){alert('Erreur : '+e.message);}
+                setSavingClient(false);
+              }
+
+              const lines=fi.lines.map(l=>{
+                const ttc=parseFloat(l.prixTTC)||0;
+                const ht=Math.round((ttc/1.07)*1000)/1000;
+                const qty=parseFloat(l.qty)||1;
+                return{...l,prixHT:ht,prixTTC:ttc,totalHT:Math.round(qty*ht*100)/100,totalTTC:Math.round(qty*ttc*100)/100};
+              });
+              const grandTTC=Math.round(lines.reduce((a,l)=>a+l.totalTTC,0)*100)/100;
+              const grandHT=Math.round(lines.reduce((a,l)=>a+l.totalHT,0)*100)/100;
+              const tvaAmt=Math.round((grandTTC-grandHT)*100)/100;
+              const remise=parseFloat(fi.remise)||0;
+              const remiseMont=Math.round(grandTTC*(remise/100)*100)/100;
+              const avantTimbre=Math.round((grandTTC-remiseMont)*100)/100;
+              const timbre=1;
+              const netAPayer=Math.round((avantTimbre+timbre)*100)/100;
+              const invNum=fi.invNum||"00000";
+
+              return(
+              <div className="modal" style={{maxWidth:660,fontFamily:'"Inter",sans-serif'}}>
+                {/* ── FORMULAIRE ── */}
                 <div className="no-print" style={{marginBottom:16}}>
                   <h2 style={{fontSize:20,fontWeight:600,color:G2,marginBottom:16,fontFamily:'"Cormorant Garamond",serif'}}>🧾 Facture libre</h2>
+
+                  {/* ── RECHERCHE CLIENT ── */}
+                  <div style={{background:"#f0f4ff",border:"1px solid #c0cfee",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                      <p style={{fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#3a5fc8",textTransform:"uppercase",letterSpacing:.8}}>📋 Annuaire clients</p>
+                      {fi.client&&<button onClick={saveClient} disabled={savingClient} style={{fontSize:10,background:"#3a5fc8",color:"#fff",border:"none",borderRadius:5,padding:"3px 10px",cursor:"pointer",fontFamily:'"Jost",sans-serif',fontWeight:600}}>
+                        {savingClient?"...":"💾 Mémoriser"}
+                      </button>}
+                    </div>
+                    <div style={{position:"relative"}}>
+                      <input
+                        value={clientSearch}
+                        onChange={e=>{setClientSearch(e.target.value);setShowSuggestions(true);}}
+                        onFocus={()=>setShowSuggestions(true)}
+                        onBlur={()=>setTimeout(()=>setShowSuggestions(false),200)}
+                        placeholder="🔍 Rechercher un client mémorisé…"
+                        style={{width:"100%",fontSize:12,padding:"7px 10px",border:"1px solid #c0cfee",borderRadius:6,background:"#fff"}}
+                      />
+                      {showSuggestions&&suggestions.length>0&&(
+                        <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #c0cfee",borderRadius:6,boxShadow:"0 4px 12px rgba(0,0,0,0.1)",zIndex:100,maxHeight:200,overflowY:"auto"}}>
+                          {suggestions.map(c=>(
+                            <div key={c.id} onMouseDown={()=>selectClient(c)} style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f0f0f8",display:"flex",justifyContent:"space-between",alignItems:"center"}}
+                              onMouseEnter={e=>e.currentTarget.style.background="#f0f4ff"}
+                              onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+                              <div>
+                                <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,fontWeight:700,color:"#2c2416"}}>{c.nom}</p>
+                                {c.mf&&<p style={{fontFamily:'"Jost",sans-serif',fontSize:10,color:"#8a7040"}}>MF : {c.mf}</p>}
+                              </div>
+                              <p style={{fontFamily:'"Jost",sans-serif',fontSize:10,color:"#b0a070"}}>{c.phone||""}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Infos client */}
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
                     {[["Client","client","Nom du client"],["Téléphone","phone","xx xxx xxx"],["Email","email","email@exemple.com"]].map(([label,key,ph])=>(
@@ -3209,7 +4000,9 @@ function App({user,onLogout}){
                 </div>
 
               </div>
-            );
+              );
+            } // fin FreeInvoiceModal
+            return <FreeInvoiceModal/>;
           })()}
 
           {/* DEVIS GROUPE */}
@@ -3486,9 +4279,8 @@ function App({user,onLogout}){
         // ── BON RESTAURANT NOMINATIF ──
         if(printData.type==="bonRestaurant"){
           const repasIcon=printData.repas==="diner"?"🌙":"🌤";
-          // Support ancien format (date unique) et nouveau (nuits multiples)
-          const nuits=printData.nuits||[printData.date];
-          const UnBon=({dateStr})=>(
+          const nuits=printData.bons||printData.nuits?.map(d=>({date:d,guest:printData.guest}))||[{date:printData.date,guest:printData.guest}];
+          const UnBon=({dateStr,guest})=>(
             <div style={{
               width:"120mm",height:"48mm",
               border:"1.5px solid #c9952a",
@@ -3523,7 +4315,7 @@ function App({user,onLogout}){
                     <p style={{fontSize:6,fontWeight:700,color:"#a09080",textTransform:"uppercase",letterSpacing:.5,margin:"0 0 1px"}}>Valable le</p>
                     <p style={{fontSize:9,fontWeight:800,color:"#2c2416",margin:"0 0 5px"}}>{new Date(dateStr+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"long",year:"numeric"})}</p>
                     <p style={{fontSize:6,fontWeight:700,color:"#a09080",textTransform:"uppercase",letterSpacing:.5,margin:"0 0 1px"}}>Client</p>
-                    <p style={{fontSize:11,fontWeight:800,color:"#2c2416",margin:0,lineHeight:1.2}}>{printData.guest}</p>
+                    <p style={{fontSize:11,fontWeight:800,color:"#2c2416",margin:0,lineHeight:1.2}}>{guest}</p>
                   </div>
                   {printData.showCachet&&(
                     <img src={CACHET_IMG} alt="" style={{width:40,height:40,objectFit:"contain",mixBlendMode:"multiply",flexShrink:0}}/>
@@ -3543,9 +4335,9 @@ function App({user,onLogout}){
             <div id="print-zone" style={{display:"none"}}>
               <div className="print-a4" style={{padding:"8mm"}}>
                 <div style={{display:"flex",flexDirection:"column",gap:"3mm"}}>
-                  {nuits.map((d,idx)=>(
-                    <React.Fragment key={d}>
-                      <UnBon dateStr={d}/>
+                  {nuits.map((b,idx)=>(
+                    <React.Fragment key={idx}>
+                      <UnBon dateStr={b.date} guest={b.guest}/>
                       {idx<nuits.length-1&&(
                         <div style={{width:"100%",borderTop:"1px dashed #d0c090",display:"flex",alignItems:"center",justifyContent:"center"}}>
                           <span style={{background:"#fff",padding:"0 6px",fontSize:7,color:"#c9952a"}}>✂</span>
