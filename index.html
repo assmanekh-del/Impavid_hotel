@@ -708,7 +708,8 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                     {fact.client&&(
                       <div style={{marginBottom:14,borderRadius:4,padding:"10px 14px",border:"1px solid #ccc"}}>
                         <p style={{fontSize:9,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Facturé à</p>
-                        <p style={{fontSize:15,fontWeight:600,color:"#2c2416"}}>{fact.client}</p>
+                        <p style={{fontSize:15,fontWeight:600,color:"#2c2416",whiteSpace:"pre-line"}}>{fact.client}</p>
+                        {fact.adresse&&<p style={{fontSize:11,color:"#6a5a45",marginTop:2,whiteSpace:"pre-line"}}>{fact.adresse}</p>}
                         {fact.mf&&<p style={{fontSize:11,color:"#6a5a45",fontWeight:600}}>MF : {fact.mf}</p>}
                         {fact.cin&&<p style={{fontSize:11,color:"#6a5a45"}}>CIN : {fact.cin}</p>}
                         {fact.phone&&<p style={{fontSize:11,color:"#6a5a45"}}>{fact.phone}</p>}
@@ -1725,7 +1726,7 @@ function App({user,onLogout}){
   const [devisInfo,setDevisInfo]=useState({client:"",checkin:"",checkout:"",notes:""});
   const [newResName,setNewResName]=useState("");
   const [newResRole,setNewResRole]=useState("menage");
-  const [freeInvoice,setFreeInvoice]=useState({client:"",phone:"",email:"",mf:"",lines:[{code:"",desc:"",qty:1,prixTTC:0}],remise:0,notes:"",showCachet:true});
+  const [freeInvoice,setFreeInvoice]=useState({client:"",adresse:"",phone:"",email:"",mf:"",lines:[{code:"",desc:"",qty:1,prixTTC:0}],remise:0,notes:"",showCachet:true});
   const [searchDates,setSearchDates]=useState({checkin:"",checkout:""});
   const [calYear,setCalYear]=useState(new Date().getFullYear());
   const [calMonth,setCalMonth]=useState(new Date().getMonth());
@@ -1814,7 +1815,7 @@ function App({user,onLogout}){
 
   async function openFreeInvoice(){
     const num=await nextInvNum();
-    setFreeInvoice({client:"",phone:"",email:"",mf:"",lines:[{code:"",desc:"",qty:1,prixTTC:0}],remise:0,notes:"",showCachet:true,invNum:num,saved:false});
+    setFreeInvoice({client:"",adresse:"",phone:"",email:"",mf:"",lines:[{code:"",desc:"",qty:1,prixTTC:0}],remise:0,notes:"",showCachet:true,invNum:num,saved:false});
     setModal({type:"freeInvoice"});
   }
 
@@ -4042,13 +4043,34 @@ function App({user,onLogout}){
                   </div>
 
                   {/* Infos client */}
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
-                    {[["Client","client","Nom du client"],["Téléphone","phone","xx xxx xxx"],["Email","email","email@exemple.com"]].map(([label,key,ph])=>(
+                  <div style={{marginBottom:10}}>
+                    <label style={{display:"block",fontSize:10,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>
+                      Client
+                      <span style={{fontSize:9,fontWeight:500,color:"#a09080",marginLeft:6,textTransform:"none",letterSpacing:0}}>un nom par ligne si plusieurs</span>
+                    </label>
+                    <textarea value={fi.client} onChange={e=>setFI(f=>({...f,client:e.target.value}))} rows={2} placeholder={"Ex : Société ABC\nM. Mohamed Ben Ali"} style={{fontSize:12,padding:"7px 10px",resize:"vertical",width:"100%"}}/>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                    {[["Téléphone","phone","xx xxx xxx"],["Email","email","email@exemple.com"]].map(([label,key,ph])=>(
                       <div key={key}>
                         <label style={{display:"block",fontSize:10,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>{label}</label>
                         <input value={fi[key]} onChange={e=>setFI(f=>({...f,[key]:e.target.value}))} placeholder={ph} style={{fontSize:12,padding:"7px 10px"}}/>
                       </div>
                     ))}
+                  </div>
+                  {/* Adresse client — supporte plusieurs clients (retour à la ligne) */}
+                  <div style={{marginBottom:10}}>
+                    <label style={{display:"block",fontSize:10,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:4,fontFamily:'"Jost",sans-serif'}}>
+                      Adresse client
+                      <span style={{fontSize:9,fontWeight:500,color:"#a09080",marginLeft:6,textTransform:"none",letterSpacing:0}}>facultatif · un client par ligne si plusieurs</span>
+                    </label>
+                    <textarea
+                      value={fi.adresse||""}
+                      onChange={e=>setFI(f=>({...f,adresse:e.target.value}))}
+                      rows={2}
+                      placeholder={"Ex : Société ABC — Tunis\nSociété XYZ — Sfax"}
+                      style={{fontSize:12,padding:"7px 10px",resize:"vertical",width:"100%"}}
+                    />
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
                     <div>
@@ -4135,7 +4157,7 @@ function App({user,onLogout}){
                         const rem=parseFloat(fi.remise)||0;
                         const remMont=Math.round(gTTC*(rem/100)*100)/100;
                         const net=Math.round((gTTC-remMont+1)*100)/100;
-                        const ok=await saveFacture({numero:fi.invNum,type:'libre',client:fi.client||null,phone:fi.phone||null,email:fi.email||null,mf:fi.mf||null,montant_ht:gHT,tva:Math.round((gTTC-gHT)*100)/100,timbre:1,montant_ttc:net,remise:rem,notes:fi.notes||null,lignes:fi.lines});
+                        const ok=await saveFacture({numero:fi.invNum,type:'libre',client:fi.client||null,adresse:fi.adresse||null,phone:fi.phone||null,email:fi.email||null,mf:fi.mf||null,montant_ht:gHT,tva:Math.round((gTTC-gHT)*100)/100,timbre:1,montant_ttc:net,remise:rem,notes:fi.notes||null,lignes:fi.lines});
                         if(ok){setFI(f=>({...f,saved:true}));showToast('Facture F-'+fi.invNum+' enregistrée ✓','success');}
                         else showToast('Erreur enregistrement','error');
                       }}>💾 Enregistrer</button>
@@ -4156,7 +4178,7 @@ function App({user,onLogout}){
                       const gTTC=Math.round(lc.reduce((a,l)=>a+l.totalTTC,0)*100)/100;
                       const gHT=Math.round(lc.reduce((a,l)=>a+l.totalHT,0)*100)/100;
                       const rem=parseFloat(fi.remise)||0;
-                      doPrint({numero:'F-'+fi.invNum,type:'libre',client:fi.client,mf:fi.mf,phone:fi.phone,cin:null,showCachet:fi.showCachet!==false,montant_ht:gHT,tva:Math.round((gTTC-gHT)*100)/100,montant_ttc:Math.round((gTTC-Math.round(gTTC*(rem/100)*100)/100+1)*100)/100,remise:rem,notes:fi.notes,lignes:fi.lines,created_at:new Date()});
+                      doPrint({numero:'F-'+fi.invNum,type:'libre',client:fi.client,adresse:fi.adresse,mf:fi.mf,phone:fi.phone,cin:null,showCachet:fi.showCachet!==false,montant_ht:gHT,tva:Math.round((gTTC-gHT)*100)/100,montant_ttc:Math.round((gTTC-Math.round(gTTC*(rem/100)*100)/100+1)*100)/100,remise:rem,notes:fi.notes,lignes:fi.lines,created_at:new Date()});
                     }}>🖨 Imprimer</button>
                   </div>
                 </div>
@@ -4187,7 +4209,8 @@ function App({user,onLogout}){
                   {fi.client&&(
                     <div style={{marginBottom:14,background:"#faf8f5",borderRadius:6,padding:"10px 14px",border:"1px solid #e0d8cc"}}>
                       <p style={{fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Facturé à</p>
-                      <p style={{fontSize:15,fontWeight:600,color:"#2c2416"}}>{fi.client}</p>
+                      <p style={{fontSize:15,fontWeight:600,color:"#2c2416",whiteSpace:"pre-line"}}>{fi.client}</p>
+                      {fi.adresse&&<p style={{fontSize:11,color:"#6a5a45",marginTop:2,whiteSpace:"pre-line"}}>{fi.adresse}</p>}
                       {fi.mf&&<p style={{fontSize:11,color:"#6a5a45",fontWeight:600}}>MF : {fi.mf}</p>}
                       {fi.phone&&<p style={{fontSize:11,color:"#6a5a45"}}>{fi.phone}</p>}
                       {fi.email&&<p style={{fontSize:11,color:"#6a5a45"}}>{fi.email}</p>}
@@ -4635,7 +4658,8 @@ function App({user,onLogout}){
               {printData.client&&(
                 <div style={{marginBottom:14,background:"#faf8f5",borderRadius:6,padding:"10px 14px",border:"1px solid #e0d8cc"}}>
                   <p style={{fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Facturé à</p>
-                  <p style={{fontSize:15,fontWeight:600,color:"#000"}}>{printData.client}</p>
+                  <p style={{fontSize:15,fontWeight:600,color:"#000",whiteSpace:"pre-line"}}>{printData.client}</p>
+                  {printData.adresse&&<p style={{fontSize:11,color:"#6a5a45",marginTop:2,whiteSpace:"pre-line"}}>{printData.adresse}</p>}
                   {printData.mf&&<p style={{fontSize:11,color:"#6a5a45",fontWeight:600}}>MF : {printData.mf}</p>}
                   {printData.cin&&<p style={{fontSize:11,color:"#6a5a45"}}>CIN : {printData.cin}</p>}
                   {printData.phone&&<p style={{fontSize:11,color:"#6a5a45"}}>{printData.phone}</p>}
