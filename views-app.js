@@ -2896,8 +2896,8 @@ function App({user,onLogout}){
             Math.round((TARIFS[r.billingType||(typeMap[room?.type]||"double")]||160)*(1-(r.remise||0)/100)*100)/100;
           const coutExtra=Math.round(nExtra*prix*100)/100;
           return(
-            <div className="modal-overlay" onClick={closeModal}>
-              <div className="modal" style={{maxWidth:420}} onClick={e=>e.stopPropagation()}>
+            <div style={{position:"fixed",inset:0,background:"rgba(42,30,8,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}} onClick={closeModal}>
+              <div style={{background:"#fff",borderRadius:12,padding:"28px 32px",maxWidth:420,width:"100%",boxShadow:"0 8px 40px rgba(42,30,8,0.18)"}} onClick={e=>e.stopPropagation()}>
                 <h2 style={{fontSize:20,fontWeight:500,marginBottom:4,fontFamily:'"Cormorant Garamond",serif'}}>📅 Prolonger le séjour</h2>
                 <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,color:"#aaa",marginBottom:4}}>
                   checkout actuel: {r.checkout} | nouveau: {newCo} | conflit: {String(!!conflit)}
