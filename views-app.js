@@ -1200,98 +1200,6 @@ function App({user,onLogout}){
 
         {/* ── ARCHIVES FACTURES ── */}
         {view==="archives"&&<ArchivesView sb={sb} openDetail={openDetail} ROOMS={ROOMS} LOGO={LOGO} G2="#8B6434" doPrint={doPrint} setModal={setModal}/>}
-        {/* ══ MODAL PROLONGER SÉJOUR ══ */}
-        {modal?.type==="prolonger"&&(()=>{
-          const r=modal.data;
-          const room=ROOMS.find(rm=>rm.id===r.roomId);
-          const newCo=modal.newCheckout;
-          // Vérifier si la chambre est libre après le checkout actuel
-          const conflit=newCo>r.checkout?reservations.find(res=>
-            res.roomId===r.roomId&&
-            res.id!==r.id&&
-            ["confirmed","checkedin","pending","blocked"].includes(res.status)&&
-            res.checkin>=r.checkout&&
-            res.checkin<newCo
-          ):null;
-          const nNow=Math.max(0,(new Date(r.checkout)-new Date(r.checkin))/86400000);
-          const nNew=Math.max(0,(new Date(newCo)-new Date(r.checkin))/86400000);
-          const nExtra=nNew-nNow;
-          const TARIFS={single:100,double:160,triple:220,quad:280,suite:200};
-          const typeMap={Single:"single",Double:"double",Twin:"double",Triple:"triple",Suite:"suite"};
-          const prix=r.customPrice!==undefined?r.customPrice:
-            Math.round((TARIFS[r.billingType||(typeMap[room?.type]||"double")]||160)*(1-(r.remise||0)/100)*100)/100;
-          const coutExtra=Math.round(nExtra*prix*100)/100;
-          return(
-            <div className="modal-overlay" onClick={closeModal}>
-              <div className="modal" style={{maxWidth:420}} onClick={e=>e.stopPropagation()}>
-                <h2 style={{fontSize:20,fontWeight:500,marginBottom:4,fontFamily:'"Cormorant Garamond",serif'}}>📅 Prolonger le séjour</h2>
-                <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,color:"#aaa",marginBottom:4}}>
-                  checkout actuel: {r.checkout} | nouveau: {newCo} | conflit: {String(!!conflit)}
-                </p>
-                <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#8a7040",marginBottom:20}}>
-                  {r.guest} — Ch. {room?.number}
-                </p>
-                <div style={{background:"#faf8f5",borderRadius:8,padding:"12px 16px",marginBottom:16,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  <div>
-                    <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>Arrivée</p>
-                    <p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:600}}>{new Date(r.checkin+"T12:00:00").toLocaleDateString("fr-FR")}</p>
-                  </div>
-                  <div>
-                    <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>Départ actuel</p>
-                    <p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:600,color:"#c95050"}}>{new Date(r.checkout+"T12:00:00").toLocaleDateString("fr-FR")}</p>
-                  </div>
-                </div>
-                <div style={{marginBottom:16}}>
-                  <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:6}}>
-                    Nouveau départ *
-                  </label>
-                  <input type="date" value={newCo} min={r.checkout}
-                    onChange={e=>setModal(m=>({...m,newCheckout:e.target.value}))}
-                    style={{fontSize:14,padding:"9px 12px",width:"100%"}}/>
-                </div>
-                {newCo>r.checkout&&(
-                  <div style={{background:conflit?"#fdf0f0":"#f0faf5",border:"1px solid "+(conflit?"#e0a0a0":"#a0d8b8"),borderRadius:8,padding:"10px 14px",marginBottom:16}}>
-                    {conflit?(
-                      <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#c95050",fontWeight:700}}>
-                        ⚠️ Chambre déjà réservée à partir du {new Date(conflit.checkin+"T12:00:00").toLocaleDateString("fr-FR")} ({conflit.guest})
-                      </p>
-                    ):(
-                      <>
-                        <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#2d7a4f",fontWeight:700,marginBottom:4}}>✅ Chambre disponible</p>
-                        <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#6a5530"}}>
-                          +{nExtra} nuit{nExtra>1?"s":""} × {prix.toFixed(3)} TND = <strong>{coutExtra.toFixed(3)} TND</strong> supplémentaires
-                        </p>
-                        <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040",marginTop:2}}>
-                          Total : {nNew} nuits — {(nNew*prix).toFixed(3)} TND
-                        </p>
-                      </>
-                    )}
-                  </div>
-                )}
-                <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
-                  <button className="btn-ghost" onClick={closeModal}>Annuler</button>
-                  <button className="btn-gold"
-                    disabled={!newCo||newCo<=r.checkout||!!conflit}
-                    style={{opacity:(!newCo||newCo<=r.checkout||!!conflit)?0.4:1,cursor:(!newCo||newCo<=r.checkout||!!conflit)?"not-allowed":"pointer"}}
-                    onClick={async(e)=>{
-                      e.stopPropagation();
-                      try{
-                        const {error:pErr}=await sb.from("reservations").update({checkout:newCo}).eq("id",r.id);
-                        if(pErr){console.error("prolonger error:",pErr);showToast("Erreur: "+pErr.message,"error");return;}
-                        setReservations(prev=>prev.map(x=>x.id===r.id?{...x,checkout:newCo}:x));
-                        addLog("📅 Séjour prolongé",{client:r.guest,chambre:room?.number,ancien_checkout:r.checkout,nouveau_checkout:newCo});
-                        showToast("Séjour prolongé jusqu'au "+new Date(newCo+"T12:00:00").toLocaleDateString("fr-FR")+" ✓");
-                        closeModal();
-                      }catch(e){console.error("prolonger catch:",e);showToast("Erreur","error");}
-                    }}>
-                    ✓ Confirmer la prolongation
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
         {/* ══ MODAL CHOIX DÉPART/ARRIVÉE MÊME JOUR ══ */}
         {modal?.type==="calChoix"&&(
           <div className="modal-overlay" onClick={closeModal}>
@@ -2965,6 +2873,98 @@ function App({user,onLogout}){
       })()}
       </div>{/* fin contenu principal */}
     </div>
+
+    {/* ══ MODAL PROLONGER SÉJOUR ══ */}
+    {modal?.type==="prolonger"&&(()=>{
+          const r=modal.data;
+          const room=ROOMS.find(rm=>rm.id===r.roomId);
+          const newCo=modal.newCheckout;
+          // Vérifier si la chambre est libre après le checkout actuel
+          const conflit=newCo>r.checkout?reservations.find(res=>
+            res.roomId===r.roomId&&
+            res.id!==r.id&&
+            ["confirmed","checkedin","pending","blocked"].includes(res.status)&&
+            res.checkin>=r.checkout&&
+            res.checkin<newCo
+          ):null;
+          const nNow=Math.max(0,(new Date(r.checkout)-new Date(r.checkin))/86400000);
+          const nNew=Math.max(0,(new Date(newCo)-new Date(r.checkin))/86400000);
+          const nExtra=nNew-nNow;
+          const TARIFS={single:100,double:160,triple:220,quad:280,suite:200};
+          const typeMap={Single:"single",Double:"double",Twin:"double",Triple:"triple",Suite:"suite"};
+          const prix=r.customPrice!==undefined?r.customPrice:
+            Math.round((TARIFS[r.billingType||(typeMap[room?.type]||"double")]||160)*(1-(r.remise||0)/100)*100)/100;
+          const coutExtra=Math.round(nExtra*prix*100)/100;
+          return(
+            <div className="modal-overlay" onClick={closeModal}>
+              <div className="modal" style={{maxWidth:420}} onClick={e=>e.stopPropagation()}>
+                <h2 style={{fontSize:20,fontWeight:500,marginBottom:4,fontFamily:'"Cormorant Garamond",serif'}}>📅 Prolonger le séjour</h2>
+                <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,color:"#aaa",marginBottom:4}}>
+                  checkout actuel: {r.checkout} | nouveau: {newCo} | conflit: {String(!!conflit)}
+                </p>
+                <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#8a7040",marginBottom:20}}>
+                  {r.guest} — Ch. {room?.number}
+                </p>
+                <div style={{background:"#faf8f5",borderRadius:8,padding:"12px 16px",marginBottom:16,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div>
+                    <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>Arrivée</p>
+                    <p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:600}}>{new Date(r.checkin+"T12:00:00").toLocaleDateString("fr-FR")}</p>
+                  </div>
+                  <div>
+                    <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>Départ actuel</p>
+                    <p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:600,color:"#c95050"}}>{new Date(r.checkout+"T12:00:00").toLocaleDateString("fr-FR")}</p>
+                  </div>
+                </div>
+                <div style={{marginBottom:16}}>
+                  <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:6}}>
+                    Nouveau départ *
+                  </label>
+                  <input type="date" value={newCo} min={r.checkout}
+                    onChange={e=>setModal(m=>({...m,newCheckout:e.target.value}))}
+                    style={{fontSize:14,padding:"9px 12px",width:"100%"}}/>
+                </div>
+                {newCo>r.checkout&&(
+                  <div style={{background:conflit?"#fdf0f0":"#f0faf5",border:"1px solid "+(conflit?"#e0a0a0":"#a0d8b8"),borderRadius:8,padding:"10px 14px",marginBottom:16}}>
+                    {conflit?(
+                      <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#c95050",fontWeight:700}}>
+                        ⚠️ Chambre déjà réservée à partir du {new Date(conflit.checkin+"T12:00:00").toLocaleDateString("fr-FR")} ({conflit.guest})
+                      </p>
+                    ):(
+                      <>
+                        <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#2d7a4f",fontWeight:700,marginBottom:4}}>✅ Chambre disponible</p>
+                        <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#6a5530"}}>
+                          +{nExtra} nuit{nExtra>1?"s":""} × {prix.toFixed(3)} TND = <strong>{coutExtra.toFixed(3)} TND</strong> supplémentaires
+                        </p>
+                        <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040",marginTop:2}}>
+                          Total : {nNew} nuits — {(nNew*prix).toFixed(3)} TND
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+                <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
+                  <button className="btn-ghost" onClick={closeModal}>Annuler</button>
+                  <button className="btn-gold"
+                    disabled={!newCo||newCo<=r.checkout||!!conflit}
+                    style={{opacity:(!newCo||newCo<=r.checkout||!!conflit)?0.4:1,cursor:(!newCo||newCo<=r.checkout||!!conflit)?"not-allowed":"pointer"}}
+                    onClick={async(e)=>{
+                      e.stopPropagation();
+                      try{
+                        const {error:pErr}=await sb.from("reservations").update({checkout:newCo}).eq("id",r.id);
+                        if(pErr){console.error("prolonger error:",pErr);showToast("Erreur: "+pErr.message,"error");return;}
+                        setReservations(prev=>prev.map(x=>x.id===r.id?{...x,checkout:newCo}:x));
+                        addLog("📅 Séjour prolongé",{client:r.guest,chambre:room?.number,ancien_checkout:r.checkout,nouveau_checkout:newCo});
+                        showToast("Séjour prolongé jusqu'au "+new Date(newCo+"T12:00:00").toLocaleDateString("fr-FR")+" ✓");
+                        closeModal();
+                      }catch(e){console.error("prolonger catch:",e);showToast("Erreur","error");}
+                    }}>
+                    ✓ Confirmer la prolongation
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
     {showJournal&&(
       <>
