@@ -2875,7 +2875,7 @@ function App({user,onLogout}){
     </div>
 
     {/* ══ MODAL PROLONGER SÉJOUR ══ */}
-    {modal?.type==="prolonger"&&(()=>{
+    {modal?.type==="prolonger"&&ReactDOM.createPortal((()=>{
           const r=modal.data;
           const room=ROOMS.find(rm=>rm.id===r.roomId);
           const newCo=modal.newCheckout;
@@ -2964,7 +2964,7 @@ function App({user,onLogout}){
               </div>
             </div>
           );
-        })()}
+        })(),document.body)}
 
     {showJournal&&(
       <>
