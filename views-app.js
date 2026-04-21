@@ -336,7 +336,7 @@ function App({user,onLogout}){
     .res-row{padding:14px 20px;border-bottom:1px solid #f0e8d8;display:grid;grid-template-columns:75px 1fr 95px 110px 120px 120px;align-items:center;gap:10px;transition:background .15s;cursor:pointer}
     .res-row:hover{background:#fef9f0}
     .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-family:"Jost",sans-serif;font-weight:500}
-    .modal-overlay{position:fixed;inset:0;background:rgba(42,30,8,0.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;backdrop-filter:blur(4px)}
+    .modal-overlay{position:fixed;inset:0;background:rgba(42,30,8,0.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
     .modal{background:#fff;border-radius:12px;padding:32px;width:100%;max-width:580px;max-height:92vh;overflow-y:auto;animation:slideIn .22s ease;box-shadow:0 20px 60px rgba(42,30,8,0.2)}
     .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .form-group label{display:block;font-family:"Jost",sans-serif;font-size:11px;letter-spacing:1.5px;color:#8a7040;text-transform:uppercase;margin-bottom:6px;font-weight:600}
@@ -909,9 +909,11 @@ function App({user,onLogout}){
                                   ["confirmed","checkedin"].includes(r.status)&&
                                   r.checkout===d&&r.checkin<d
                                 );
+                                // Vrai conflit seulement si ce sont deux réservations DIFFÉRENTES
+                                const vraiConflit = resDepart&&resArrivee&&resDepart.id!==resArrivee.id;
 
                                 const handleClick=()=>{
-                                  if(status==="depart"&&resArrivee){
+                                  if(status==="depart"&&vraiConflit){
                                     // Départ ET arrivée le même jour → menu de choix
                                     setModal({type:"calChoix",room,date:d,resDepart,resArrivee});
                                   } else if(status==="depart"){
@@ -2191,7 +2193,12 @@ function App({user,onLogout}){
                   {r.status==="pending"&&<button className="btn-outline" onClick={()=>{updateStatus(r.id,"confirmed");setModal({type:"detail",data:{...r,status:"confirmed"}});}}>Confirmer</button>}
                   {r.status==="confirmed"&&<button className="btn-outline" onClick={()=>{updateStatus(r.id,"checkedin");setModal({type:"detail",data:{...r,status:"checkedin"}});}}>Check-in ✓</button>}
                   {r.status==="checkedin"&&<button className="btn-outline" onClick={()=>{updateStatus(r.id,"checkedout");setModal({type:"detail",data:{...r,status:"checkedout"}});}}>Check-out ✓</button>}
-                  {["confirmed","checkedin"].includes(r.status)&&<button className="btn-outline" style={{background:"#f0f8ff",borderColor:"#a0c8e8",color:"#1a5a8a"}} onClick={()=>setModal({type:"prolonger",data:r,newCheckout:r.checkout})}>📅 Prolonger</button>}
+                  {["confirmed","checkedin"].includes(r.status)&&<button className="btn-outline" style={{background:"#f0f8ff",borderColor:"#a0c8e8",color:"#1a5a8a"}} onClick={()=>{
+                      const d=new Date(r.checkout+"T12:00:00");
+                      d.setDate(d.getDate()+1);
+                      const nextDay=d.toISOString().split("T")[0];
+                      setModal({type:"prolonger",data:r,newCheckout:nextDay});
+                    }}>📅 Prolonger</button>}
                   {!["cancelled","blocked","checkedout"].includes(r.status)&&<button className="btn-outline" onClick={()=>{updateStatus(r.id,"cancelled");addLog("🚫 Réservation annulée",{client:r.guest,chambre:ROOMS.find(rm=>rm.id===r.roomId)?.number});setModal({type:"detail",data:{...r,status:"cancelled"}});}}>Annuler</button>}
                   {!r.paid&&r.status!=="blocked"&&<button className="btn-outline" onClick={()=>{markPaid(r.id);setModal({type:"detail",data:{...r,paid:true}});}}>Marquer payé</button>}
                   {!["blocked","cancelled"].includes(r.status)&&<button className="btn-outline" onClick={()=>openInvoice(r)}>Facture</button>}
