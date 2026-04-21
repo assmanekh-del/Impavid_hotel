@@ -1206,13 +1206,13 @@ function App({user,onLogout}){
           const room=ROOMS.find(rm=>rm.id===r.roomId);
           const newCo=modal.newCheckout;
           // Vérifier si la chambre est libre après le checkout actuel
-          const conflit=reservations.find(res=>
+          const conflit=newCo>r.checkout?reservations.find(res=>
             res.roomId===r.roomId&&
             res.id!==r.id&&
             ["confirmed","checkedin","pending","blocked"].includes(res.status)&&
             res.checkin>=r.checkout&&
             res.checkin<newCo
-          );
+          ):null;
           const nNow=Math.max(0,(new Date(r.checkout)-new Date(r.checkin))/86400000);
           const nNew=Math.max(0,(new Date(newCo)-new Date(r.checkin))/86400000);
           const nExtra=nNew-nNow;
@@ -1269,15 +1269,16 @@ function App({user,onLogout}){
                   <button className="btn-ghost" onClick={closeModal}>Annuler</button>
                   <button className="btn-gold"
                     disabled={!newCo||newCo<=r.checkout||!!conflit}
-                    style={{opacity:(!newCo||newCo<=r.checkout||!!conflit)?.5:1}}
+                    style={{opacity:(!newCo||newCo<=r.checkout||!!conflit)?0.5:1,cursor:(!newCo||newCo<=r.checkout||!!conflit)?"not-allowed":"pointer"}}
                     onClick={async()=>{
                       try{
-                        await sb.from("reservations").update({checkout:newCo}).eq("id",r.id);
+                        const {error:pErr}=await sb.from("reservations").update({checkout:newCo}).eq("id",r.id);
+                        if(pErr){console.error("prolonger error:",pErr);showToast("Erreur: "+pErr.message,"error");return;}
                         setReservations(prev=>prev.map(x=>x.id===r.id?{...x,checkout:newCo}:x));
                         addLog("📅 Séjour prolongé",{client:r.guest,chambre:room?.number,ancien_checkout:r.checkout,nouveau_checkout:newCo});
                         showToast("Séjour prolongé jusqu'au "+new Date(newCo+"T12:00:00").toLocaleDateString("fr-FR")+" ✓");
                         closeModal();
-                      }catch(e){showToast("Erreur","error");}
+                      }catch(e){console.error("prolonger catch:",e);showToast("Erreur","error");}
                     }}>
                     ✓ Confirmer la prolongation
                   </button>
