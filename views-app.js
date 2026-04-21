@@ -1225,6 +1225,9 @@ function App({user,onLogout}){
             <div className="modal-overlay" onClick={closeModal}>
               <div className="modal" style={{maxWidth:420}} onClick={e=>e.stopPropagation()}>
                 <h2 style={{fontSize:20,fontWeight:500,marginBottom:4,fontFamily:'"Cormorant Garamond",serif'}}>📅 Prolonger le séjour</h2>
+                <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,color:"#aaa",marginBottom:4}}>
+                  checkout actuel: {r.checkout} | nouveau: {newCo} | conflit: {String(!!conflit)}
+                </p>
                 <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#8a7040",marginBottom:20}}>
                   {r.guest} — Ch. {room?.number}
                 </p>
