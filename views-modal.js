@@ -189,16 +189,25 @@ function FreeInvoiceModal({fi,setFreeInvoice,sb,REFS,LOGO,closeModal,saveFacture
       <button onClick={()=>setFI(f=>({...f,lines:[...f.lines,{code:"",desc:"",qty:1,prixTTC:0}]}))} style={{fontSize:11,background:"#faf8f5",border:"1px dashed #c0b080",color:"#8a7040",padding:"5px 14px",borderRadius:6,cursor:"pointer",marginBottom:12,fontFamily:'"Jost",sans-serif'}}>
         + Ajouter une ligne
       </button>
-      {/* Remise + Notes */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+      {/* Remise + Mode + Notes */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
         <div style={{display:"flex",alignItems:"center",gap:10,background:"#fef9f0",border:"1px solid #e8d8b0",borderRadius:8,padding:"10px 14px"}}>
           <label style={{fontFamily:'"Jost",sans-serif',fontSize:11,fontWeight:700,color:"#8a7040",textTransform:"uppercase",whiteSpace:"nowrap"}}>🏷 Remise %</label>
           <input type="number" min="0" max="100" value={fi.remise||0} onChange={e=>setFI(f=>({...f,remise:e.target.value}))} style={{width:60,padding:"5px 8px",border:"1.5px solid #e0d0b0",borderRadius:6,fontFamily:'"Jost",sans-serif',fontSize:14,fontWeight:600,color:"#c9952a",textAlign:"center"}}/>
           {remise>0&&<span style={{fontSize:11,color:"#c95050",fontWeight:600}}>− {remiseMont.toFixed(3)} TND</span>}
         </div>
         <div>
+          <label style={{display:"block",fontSize:10,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:4,fontFamily:'"Jost",sans-serif'}}>💳 Mode de paiement</label>
+          <select value={fi.mode_paiement||"especes"} onChange={e=>setFI(f=>({...f,mode_paiement:e.target.value}))} style={{width:"100%",padding:"8px 10px",border:"1.5px solid #e0d0b0",borderRadius:6,fontSize:12}}>
+            <option value="especes">💵 Espèces</option>
+            <option value="carte">💳 Carte bancaire</option>
+            <option value="cheque">📝 Chèque</option>
+            <option value="virement">🏦 Virement</option>
+          </select>
+        </div>
+        <div>
           <label style={{display:"block",fontSize:10,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:4,fontFamily:'"Jost",sans-serif'}}>Notes</label>
-          <textarea value={fi.notes} onChange={e=>setFI(f=>({...f,notes:e.target.value}))} rows={2} placeholder="Remarques..." style={{fontSize:12,padding:"7px 10px",resize:"none"}}/>
+          <textarea value={fi.notes} onChange={e=>setFI(f=>({...f,notes:e.target.value}))} rows={2} placeholder="Remarques..." style={{fontSize:12,padding:"7px 10px",resize:"none",width:"100%"}}/>
         </div>
       </div>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:14,paddingTop:12,borderTop:"1px solid #f0ebe3"}}>
@@ -212,7 +221,7 @@ function FreeInvoiceModal({fi,setFreeInvoice,sb,REFS,LOGO,closeModal,saveFacture
             const remMont=Math.round(gTTC*(rem/100)*100)/100;
             const net=Math.round((gTTC-remMont+1)*100)/100;
             const num=await nextInvNum();setFI(f=>({...f,invNum:num}));
-            const ok=await saveFacture({numero:num,type:'libre',client:fi.client||null,adresse:fi.adresse||null,phone:fi.phone||null,email:fi.email||null,mf:fi.mf||null,montant_ht:gHT,tva:Math.round((gTTC-gHT)*100)/100,timbre:1,montant_ttc:net,remise:rem,notes:fi.notes||null,lignes:fi.lines});
+            const ok=await saveFacture({numero:num,type:'libre',client:fi.client||null,adresse:fi.adresse||null,phone:fi.phone||null,email:fi.email||null,mf:fi.mf||null,montant_ht:gHT,tva:Math.round((gTTC-gHT)*100)/100,timbre:1,montant_ttc:net,remise:rem,notes:fi.notes||null,lignes:fi.lines,mode_paiement:fi.mode_paiement||"especes"});
             if(ok){setFI(f=>({...f,saved:true}));showToast('Facture F-'+fi.invNum+' enregistrée ✓','success');}
             else showToast('Erreur enregistrement','error');
           }}>💾 Enregistrer</button>

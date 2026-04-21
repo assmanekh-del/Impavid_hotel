@@ -299,7 +299,7 @@ function ChargesView({sb,LOGO}){
   }
 
   function openNew(){
-    setForm({date:getToday(),fournisseur:"",description:"",categorie:"Électricité",montant_ht:0,tva:0,montant_ttc:0,statut:"a_payer",notes:""});
+    setForm({date:getToday(),fournisseur:"",description:"",categorie:"Électricité",montant_ht:0,tva:0,montant_ttc:0,statut:"a_payer",notes:"",numero_facture:"",mode_paiement:"especes"});
     setModal("new");
   }
 
@@ -314,6 +314,8 @@ function ChargesView({sb,LOGO}){
       date:form.date,
       fournisseur:form.fournisseur||null,
       description:form.description,
+      numero_facture:form.numero_facture||null,
+      mode_paiement:form.mode_paiement||"especes",
       categorie:form.categorie||"Autre",
       montant_ht:parseFloat(form.montant_ht)||0,
       tva:parseFloat(form.tva)||0,
@@ -443,7 +445,7 @@ function ChargesView({sb,LOGO}){
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead>
               <tr style={{background:"#fef9f0",borderBottom:"1px solid #f0e8d8"}}>
-                {["Date","Catégorie","Description","Fournisseur","HT","TVA","TTC","Statut","Actions"].map(h=>(
+                {["Date","Catégorie","Description","Fournisseur / N° Fact.","Mode","HT","TVA","TTC","Statut","Actions"].map(h=>(
                   <th key={h} style={{padding:"10px 12px",textAlign:["HT","TVA","TTC"].includes(h)?"right":"left",fontFamily:'"Jost",sans-serif',fontSize:9,letterSpacing:1.5,color:"#8a7040",textTransform:"uppercase",fontWeight:600}}>{h}</th>
                 ))}
               </tr>
@@ -459,7 +461,13 @@ function ChargesView({sb,LOGO}){
                       <span style={{fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:10,background:bg,color}}>{c.categorie}</span>
                     </td>
                     <td style={{padding:"10px 12px",fontWeight:500,color:"#2a1e08"}}>{c.description}</td>
-                    <td style={{padding:"10px 12px",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040"}}>{c.fournisseur||"—"}</td>
+                    <td style={{padding:"10px 12px",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040"}}>
+                      <span style={{fontWeight:500,color:"#2a1e08"}}>{c.fournisseur||"—"}</span>
+                      {c.numero_facture&&<span style={{display:"block",fontSize:9,color:"#b0a070",marginTop:2}}>📄 {c.numero_facture}</span>}
+                    </td>
+                    <td style={{padding:"10px 12px",textAlign:"center"}}>
+                      {(()=>{const m={especes:"💵",carte:"💳",cheque:"📝",virement:"🏦"};const ml={especes:"Espèces",carte:"Carte",cheque:"Chèque",virement:"Virement"};const pm=c.mode_paiement||"especes";return<><p style={{fontSize:14}}>{m[pm]||"💵"}</p><p style={{fontFamily:'"Jost",sans-serif',fontSize:9,color:"#8a7040"}}>{ml[pm]}</p></>;})()}
+                    </td>
                     <td style={{padding:"10px 12px",textAlign:"right",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#6a5a45"}}>{(c.montant_ht||0).toFixed(3)}</td>
                     <td style={{padding:"10px 12px",textAlign:"right",fontFamily:'"Jost",sans-serif',fontSize:11,color:"#6a5a45"}}>{(c.tva||0).toFixed(3)}</td>
                     <td style={{padding:"10px 12px",textAlign:"right",fontWeight:700,color:"#2a1e08"}}>{(c.montant_ttc||0).toFixed(3)}</td>
@@ -507,9 +515,15 @@ function ChargesView({sb,LOGO}){
                 <label>Description *</label>
                 <input value={form.description||""} onChange={e=>setForm(f=>({...f,description:e.target.value}))} placeholder="ex : Facture STEG Avril 2026"/>
               </div>
-              <div className="form-group">
-                <label>Fournisseur</label>
-                <input value={form.fournisseur||""} onChange={e=>setForm(f=>({...f,fournisseur:e.target.value}))} placeholder="ex : STEG, SONEDE, …"/>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div className="form-group">
+                  <label>Fournisseur</label>
+                  <input value={form.fournisseur||""} onChange={e=>setForm(f=>({...f,fournisseur:e.target.value}))} placeholder="ex : STEG, SONEDE, …"/>
+                </div>
+                <div className="form-group">
+                  <label>N° Facture fournisseur</label>
+                  <input value={form.numero_facture||""} onChange={e=>setForm(f=>({...f,numero_facture:e.target.value}))} placeholder="ex : FAC-2026-042"/>
+                </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
                 <div className="form-group">
@@ -525,12 +539,21 @@ function ChargesView({sb,LOGO}){
                   <input type="number" value={form.montant_ttc||""} onChange={e=>setForm(f=>({...f,montant_ttc:e.target.value}))} placeholder="0.000" style={{fontWeight:700}}/>
                 </div>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
                 <div className="form-group">
                   <label>Statut</label>
                   <select value={form.statut||"a_payer"} onChange={e=>setForm(f=>({...f,statut:e.target.value}))}>
                     <option value="a_payer">À payer</option>
                     <option value="paye">✓ Payé</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Mode de paiement</label>
+                  <select value={form.mode_paiement||"especes"} onChange={e=>setForm(f=>({...f,mode_paiement:e.target.value}))}>
+                    <option value="especes">💵 Espèces</option>
+                    <option value="carte">💳 Carte</option>
+                    <option value="cheque">📝 Chèque</option>
+                    <option value="virement">🏦 Virement</option>
                   </select>
                 </div>
                 <div className="form-group">

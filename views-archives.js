@@ -5,6 +5,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
   const [filterType,setFilterType]=React.useState("all");
   const [filterMois,setFilterMois]=React.useState("");
   const [filterAnnee,setFilterAnnee]=React.useState("");
+  const [filterMode,setFilterMode]=React.useState("all");
   const [modalFact,setModalFact]=React.useState(null);
   const [showSuivi,setShowSuivi]=React.useState(false);
   const [suiviDu,setSuiviDu]=React.useState("");
@@ -34,7 +35,8 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
     const d=new Date(f.created_at);
     const matchMois=!filterMois||String(d.getMonth()+1).padStart(2,'0')===filterMois;
     const matchAnnee=!filterAnnee||String(d.getFullYear())===filterAnnee;
-    return matchSearch&&matchType&&matchMois&&matchAnnee;
+    const matchMode=filterMode==="all"||( f.mode_paiement||"especes")===filterMode;
+    return matchSearch&&matchType&&matchMois&&matchAnnee&&matchMode;
   });
 
   const totalTTC=liste.reduce((a,f)=>a+(f.montant_ttc||0),0);
@@ -86,6 +88,16 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
             <option value="devis">Devis</option>
           </select>
         </div>
+        <div>
+          <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>💳 Mode paiement</label>
+          <select value={filterMode} onChange={e=>setFilterMode(e.target.value)}>
+            <option value="all">Tous</option>
+            <option value="especes">💵 Espèces</option>
+            <option value="carte">💳 Carte</option>
+            <option value="cheque">📝 Chèque</option>
+            <option value="virement">🏦 Virement</option>
+          </select>
+        </div>
       </div>
 
       {/* Résumé */}
@@ -107,14 +119,14 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
         <p style={{textAlign:"center",padding:40,fontFamily:'"Jost",sans-serif',color:"#8a7040"}}>Chargement…</p>
       ):(
         <div style={{background:"#fff",border:"1px solid #e8ddc8",borderRadius:10,overflow:"hidden",boxShadow:"0 2px 8px rgba(42,30,8,0.06)"}}>
-          <div style={{padding:"11px 18px",borderBottom:"1px solid #f0e8d8",display:"grid",gridTemplateColumns:"120px 110px 1fr 120px 130px 160px",gap:8,background:"#fef9f0"}}>
-            {["N° Facture","Date","Client","Type","Montant TTC","Actions"].map(h=>(
+          <div style={{padding:"11px 18px",borderBottom:"1px solid #f0e8d8",display:"grid",gridTemplateColumns:"120px 110px 1fr 120px 100px 130px 160px",gap:8,background:"#fef9f0"}}>
+            {["N° Facture","Date","Client","Type","Paiement","Montant TTC","Actions"].map(h=>(
               <p key={h} style={{fontFamily:'"Jost",sans-serif',fontSize:9,letterSpacing:1.5,color:"#8a7040",textTransform:"uppercase",fontWeight:600}}>{h}</p>
             ))}
           </div>
           {liste.length===0&&<p style={{padding:40,color:"#b0a070",fontFamily:'"Jost",sans-serif',fontSize:14,textAlign:"center"}}>Aucune facture archivée</p>}
           {liste.map(f=>(
-            <div key={f.id} style={{display:"grid",gridTemplateColumns:"120px 110px 1fr 120px 130px 160px",gap:8,padding:"12px 18px",borderBottom:"1px solid #f5f0e8",alignItems:"center"}}>
+            <div key={f.id} style={{display:"grid",gridTemplateColumns:"120px 110px 1fr 120px 100px 130px 160px",gap:8,padding:"12px 18px",borderBottom:"1px solid #f5f0e8",alignItems:"center"}}>
               <p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:800,color:"#c9952a"}}>{f.numero}</p>
               <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040"}}>{new Date(f.created_at).toLocaleDateString("fr-FR")}</p>
               <div>
@@ -125,6 +137,23 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
               <span style={{fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:10,background:f.type==="libre"?"#fef3d0":f.type==="devis"?"#f0f4ff":"#f0faf4",color:f.type==="libre"?"#b07d1a":f.type==="devis"?"#5a7fc8":"#2a8a5a",display:"inline-block"}}>
                 {f.type==="libre"?"Facture libre":f.type==="devis"?"Devis":"Réservation"}
               </span>
+              <div style={{textAlign:"center"}}>
+                <select
+                  value={f.mode_paiement||"especes"}
+                  onChange={async e=>{
+                    const mode=e.target.value;
+                    try{
+                      await sb.from('factures').update({mode_paiement:mode}).eq('id',f.id);
+                      setFactures(prev=>prev.map(x=>x.id===f.id?{...x,mode_paiement:mode}:x));
+                    }catch(err){alert('Erreur');}
+                  }}
+                  style={{fontSize:11,padding:"4px 6px",border:"1.5px solid #e8d8b0",borderRadius:6,background:"#fef9f0",cursor:"pointer",color:"#6a5530",fontFamily:'"Jost",sans-serif'}}>
+                  <option value="especes">💵 Espèces</option>
+                  <option value="carte">💳 Carte</option>
+                  <option value="cheque">📝 Chèque</option>
+                  <option value="virement">🏦 Virement</option>
+                </select>
+              </div>
               <p style={{fontFamily:'"Jost",sans-serif',fontSize:14,fontWeight:700,color:"#2a1e08",textAlign:"right"}}>{(f.montant_ttc||0).toFixed(3)}<span style={{fontSize:9,color:"#8a7040",marginLeft:2}}>TND</span></p>
               <div style={{display:"flex",gap:6,alignItems:"center"}}>
                 <button style={{flex:1,fontSize:11,padding:"6px 8px",background:"#fef9f0",border:"1.5px solid #d4c5a0",color:"#6a5530",borderRadius:6,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontWeight:600,letterSpacing:.5}} onClick={()=>setModalFact(f)}>
@@ -178,6 +207,9 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                   ${f.paid?"✓ Payé":"À encaisser"}
                 </span>
               </td>
+              <td style="padding:6px 8px;font-size:10px;text-align:center">
+                ${{especes:"💵 Espèces",carte:"💳 Carte",cheque:"📝 Chèque",virement:"🏦 Virement"}[f.mode_paiement||"especes"]||"💵 Espèces"}
+              </td>
             </tr>
           `).join("");
           const html=`
@@ -199,7 +231,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
             <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:16px">
               <thead>
                 <tr style="background:#2c2416;color:#f5d984">
-                  ${["Date","N° Facture","Client","HT (TND)","TVA (TND)","TTC (TND)","Échéance","Statut"].map(h=>`<th style="padding:8px;text-align:${["HT (TND)","TVA (TND)","TTC (TND)"].includes(h)?"right":"left"};font-size:9px;letter-spacing:0.5px">${h}</th>`).join("")}
+                  ${["Date","N° Facture","Client","HT (TND)","TVA (TND)","TTC (TND)","Échéance","Statut","Paiement"].map(h=>`<th style="padding:8px;text-align:${["HT (TND)","TVA (TND)","TTC (TND)"].includes(h)?"right":"left"};font-size:9px;letter-spacing:0.5px">${h}</th>`).join("")}
                 </tr>
               </thead>
               <tbody>${rows}</tbody>
@@ -262,7 +294,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                   <thead style={{position:"sticky",top:0}}>
                     <tr style={{background:"#2c2416"}}>
-                      {["Date","N° Facture","Client","HT","TVA","TTC","Échéance","Statut"].map((h,i)=>(
+                      {["Date","N° Facture","Client","HT","TVA","TTC","Échéance","Statut","Paiement"].map((h,i)=>(
                         <th key={h} style={{padding:"8px 8px",textAlign:i>=3&&i<=5?"right":"left",fontSize:9,fontWeight:700,color:"#f5d984",textTransform:"uppercase",letterSpacing:.5}}>{h}</th>
                       ))}
                     </tr>
@@ -283,6 +315,18 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                           <span style={{fontSize:9,background:f.paid?"#d4f0e0":"#fad4d4",color:f.paid?"#2d7a4f":"#9a2020",padding:"2px 7px",borderRadius:8,fontWeight:700}}>
                             {f.paid?"✓ Payé":"À encaisser"}
                           </span>
+                        </td>
+                        <td style={{padding:"7px 8px",textAlign:"center"}}>
+                          <select value={f.mode_paiement||"especes"} onChange={async e=>{
+                            const mode=e.target.value;
+                            await sb.from('factures').update({mode_paiement:mode}).eq('id',f.id);
+                            setFactures(prev=>prev.map(x=>x.id===f.id?{...x,mode_paiement:mode}:x));
+                          }} style={{fontSize:10,padding:"2px 4px",border:"1px solid #e8d8b0",borderRadius:4,background:"#fef9f0",cursor:"pointer"}}>
+                            <option value="especes">💵</option>
+                            <option value="carte">💳</option>
+                            <option value="cheque">📝</option>
+                            <option value="virement">🏦</option>
+                          </select>
                         </td>
                       </tr>
                     ))}

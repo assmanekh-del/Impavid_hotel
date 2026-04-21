@@ -7,6 +7,7 @@ function App({user,onLogout}){
   const [syncing,setSyncing]=useState(false);
   const [modal,setModal]=useState(null);
   const [userRole,setUserRole]=useState(null);
+  const [paiementModal,setPaiementModal]=useState(null);
   const [showJournal,setShowJournal]=useState(false);
   const [logs,setLogs]=useState([]);
   const [logsLoading,setLogsLoading]=useState(false);
@@ -17,6 +18,7 @@ function App({user,onLogout}){
   const [filterDateFrom,setFilterDateFrom]=useState("");
   const [filterDateTo,setFilterDateTo]=useState("");
   const [filterPaid,setFilterPaid]=useState("all");
+  const [filterModePaiement,setFilterModePaiement]=useState("all");
   const [toast,setToast]=useState(null);
   const [devisRooms,setDevisRooms]=useState([]);
   const [devisInfo,setDevisInfo]=useState({client:"",checkin:"",checkout:"",notes:""});
@@ -58,8 +60,10 @@ function App({user,onLogout}){
   }
   async function saveFacture(payload){
     addLog("🧾 Facture créée",{numero:payload.numero,client:payload.client,montant:payload.montant_ttc});
+    // Ajouter mode_paiement si présent dans le form actuel
+    const payloadWithMode={...payload,mode_paiement:payload.mode_paiement||form?.modePaiement||"especes"};
     try{
-      const {error}=await sb.from('factures').insert([payload]);
+      const {error}=await sb.from('factures').insert([payloadWithMode]);
       if(error) throw error;
       return true;
     }catch(e){
@@ -113,7 +117,7 @@ function App({user,onLogout}){
   }
 
   function openFreeInvoice(){
-    setFreeInvoice({client:"",adresse:"",phone:"",email:"",mf:"",lines:[{code:"",desc:"",qty:1,prixTTC:0}],remise:0,notes:"",showCachet:true,invNum:null,saved:false});
+    setFreeInvoice({client:"",adresse:"",phone:"",email:"",mf:"",lines:[{code:"",desc:"",qty:1,prixTTC:0}],remise:0,notes:"",showCachet:true,invNum:null,saved:false,mode_paiement:"especes"});
     setModal({type:"freeInvoice"});
   }
 
@@ -278,11 +282,16 @@ function App({user,onLogout}){
     finally{setSyncing(false);}
   }
 
-  async function markPaid(id){
+  async function markPaid(id, mode="especes"){
     const r=reservations.find(x=>x.id===id);
-    addLog("💰 Paiement encaissé",{client:r?.guest,chambre:ROOMS.find(rm=>rm.id===r?.roomId)?.number,montant:r?getEffectivePrice(r):null});
+    const modeLabels={especes:"💵 Espèces",carte:"💳 Carte",cheque:"📝 Chèque",virement:"🏦 Virement"};
+    addLog("💰 Paiement encaissé",{client:r?.guest,chambre:ROOMS.find(rm=>rm.id===r?.roomId)?.number,montant:r?getEffectivePrice(r):null,mode:modeLabels[mode]||mode});
     setSyncing(true);
-    try{await sb.from("reservations").update({paid:true}).eq("id",id);showToast("Paiement enregistré ✓");}
+    try{
+      await sb.from("reservations").update({paid:true,mode_paiement:mode}).eq("id",id);
+      setReservations(prev=>prev.map(x=>x.id===id?{...x,paid:true,modePaiement:mode}:x));
+      showToast("Paiement enregistré — "+( modeLabels[mode]||mode)+" ✓");
+    }
     catch(e){showToast("Erreur","error");}
     finally{setSyncing(false);}
   }
@@ -306,7 +315,8 @@ function App({user,onLogout}){
     const byDateFrom=!filterDateFrom||r.checkin>=filterDateFrom||r.checkout>filterDateFrom;
     const byDateTo=!filterDateTo||r.checkin<=filterDateTo;
     const byPaid=filterPaid==="all"||( filterPaid==="unpaid"&&!r.paid&&!["cancelled","blocked"].includes(r.status))||(filterPaid==="paid"&&r.paid);
-    return ms&&byStatus&&byDateFrom&&byDateTo&&byPaid;
+    const byMode=filterModePaiement==="all"||(r.modePaiement||"especes")===filterModePaiement;
+    return ms&&byStatus&&byDateFrom&&byDateTo&&byPaid&&byMode;
   });
 
   const css=`
@@ -1038,7 +1048,7 @@ function App({user,onLogout}){
               </div>
 
               {/* Barre de recherche + filtres */}
-              <div style={{background:"#fff",border:"1px solid #e8ddc8",borderRadius:10,padding:"14px 18px",display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr auto",gap:12,alignItems:"end",boxShadow:"0 1px 4px rgba(42,30,8,0.05)"}}>
+              <div style={{background:"#fff",border:"1px solid #e8ddc8",borderRadius:10,padding:"14px 18px",display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr auto",gap:12,alignItems:"end",boxShadow:"0 1px 4px rgba(42,30,8,0.05)"}}>
                 {/* Recherche par nom */}
                 <div>
                   <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>🔍 Client / CIN / Email / Tél.</label>
@@ -1069,9 +1079,19 @@ function App({user,onLogout}){
                     <option value="unpaid">⏳ Impayés</option>
                     <option value="paid">✅ Payés</option>
                   </select>
-                  {(search||filterDateFrom||filterDateTo||filterStatus!=="all"||filterPaid!=="all")&&(
+                  <div>
+                    <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>🏦 Mode paiement</label>
+                    <select value={filterModePaiement} onChange={e=>setFilterModePaiement(e.target.value)} style={{width:"100%"}}>
+                      <option value="all">Tous</option>
+                      <option value="especes">💵 Espèces</option>
+                      <option value="carte">💳 Carte</option>
+                      <option value="cheque">📝 Chèque</option>
+                      <option value="virement">🏦 Virement</option>
+                    </select>
+                  </div>
+                  {(search||filterDateFrom||filterDateTo||filterStatus!=="all"||filterPaid!=="all"||filterModePaiement!=="all")&&(
                     <button className="btn-outline" style={{fontSize:11,padding:"5px 12px"}}
-                      onClick={()=>{setSearch("");setFilterDateFrom("");setFilterDateTo("");setFilterStatus("all");setFilterPaid("all");}}>
+                      onClick={()=>{setSearch("");setFilterDateFrom("");setFilterDateTo("");setFilterStatus("all");setFilterPaid("all");setFilterModePaiement("all");}}>
                       ✕ Réinitialiser
                     </button>
                   )}
@@ -1200,6 +1220,49 @@ function App({user,onLogout}){
 
         {/* ── ARCHIVES FACTURES ── */}
         {view==="archives"&&<ArchivesView sb={sb} openDetail={openDetail} ROOMS={ROOMS} LOGO={LOGO} G2="#8B6434" doPrint={doPrint} setModal={setModal}/>}
+        {/* ══ MODAL MODE DE PAIEMENT ══ */}
+        {paiementModal&&(()=>{
+          const r=paiementModal.data;
+          const room=ROOMS.find(rm=>rm.id===r.roomId);
+          const selectedMode=paiementModal.mode||"especes";
+          const modes=[
+            {value:"especes",label:"💵 Espèces",color:"#2d7a4f",bg:"#f0faf5"},
+            {value:"carte",label:"💳 Carte bancaire",color:"#1a5a8a",bg:"#f0f5ff"},
+            {value:"cheque",label:"📝 Chèque",color:"#8a5c10",bg:"#fff8ee"},
+            {value:"virement",label:"🏦 Virement",color:"#6b35b8",bg:"#f5f0fc"},
+          ];
+          return ReactDOM.createPortal(
+            <div style={{position:"fixed",inset:0,background:"rgba(42,30,8,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}} onClick={closeModal}>
+              <div style={{background:"#fff",borderRadius:12,padding:"28px 32px",maxWidth:380,width:"100%",boxShadow:"0 8px 40px rgba(42,30,8,0.18)"}} onClick={e=>e.stopPropagation()}>
+                <h2 style={{fontSize:20,fontWeight:500,marginBottom:4,fontFamily:'"Cormorant Garamond",serif'}}>💰 Mode de paiement</h2>
+                <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#8a7040",marginBottom:20}}>
+                  {r.guest} — Ch. {room?.number} — {getEffectivePrice(r).toFixed(3)} TND
+                </p>
+                <div style={{display:"grid",gap:8,marginBottom:20}}>
+                  {modes.map(m=>(
+                    <button key={m.value}
+                      onClick={()=>setPaiementModal(mod=>({...mod,mode:m.value}))}
+                      style={{padding:"12px 16px",borderRadius:8,border:"2px solid "+(selectedMode===m.value?m.color:"#e8d8b0"),background:selectedMode===m.value?m.bg:"#fff",cursor:"pointer",display:"flex",alignItems:"center",gap:10,transition:"all .15s"}}>
+                      <span style={{fontFamily:'"Jost",sans-serif',fontSize:14,fontWeight:selectedMode===m.value?700:400,color:selectedMode===m.value?m.color:"#6a5530"}}>{m.label}</span>
+                      {selectedMode===m.value&&<span style={{marginLeft:"auto",color:m.color,fontWeight:700}}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+                <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
+                  <button className="btn-ghost" onClick={()=>setPaiementModal(null)}>Annuler</button>
+                  <button className="btn-gold" onClick={async(e)=>{
+                    e.stopPropagation();
+                    await markPaid(r.id, selectedMode);
+                    setPaiementModal(null);
+                    setModal({type:"detail",data:{...r,paid:true,modePaiement:selectedMode}});
+                  }}>✓ Confirmer le paiement</button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          );
+        })()}
+
         {/* ══ MODAL CHOIX DÉPART/ARRIVÉE MÊME JOUR ══ */}
         {modal?.type==="calChoix"&&(
           <div className="modal-overlay" onClick={closeModal}>
@@ -1682,14 +1745,44 @@ function App({user,onLogout}){
                 <div className="form-grid">
                   <div className="form-group">
                     <label>Nationalité</label>
-                    <input value={form.nationality||""} onChange={e=>setForm(f=>({...f,nationality:e.target.value}))} placeholder="ex : Tunisienne, Française…"/>
+                    <select value={form.nationality||""} onChange={e=>setForm(f=>({...f,nationality:e.target.value}))}>
+                      <option value="">— Choisir —</option>
+                      <option>Tunisienne</option>
+                      <option>Algérienne</option>
+                      <option>Marocaine</option>
+                      <option>Libyenne</option>
+                      <option>Française</option>
+                      <option>Italienne</option>
+                      <option>Allemande</option>
+                      <option>Espagnole</option>
+                      <option>Britannique</option>
+                      <option>Belge</option>
+                      <option>Suisse</option>
+                      <option>Américaine</option>
+                      <option>Autre</option>
+                    </select>
                   </div>
+                  <div className="form-group">
+                    <label>Date de naissance</label>
+                    <input type="date" value={form.dateNaissance||""} onChange={e=>setForm(f=>({...f,dateNaissance:e.target.value}))}/>
+                  </div>
+                </div>
+                <div className="form-grid">
                   <div className="form-group">
                     <label style={{display:"flex",alignItems:"center",gap:6}}>
                       N° Passeport
                       <span style={{fontSize:9,fontWeight:600,color:"#a09080",background:"#f5f0e8",padding:"1px 6px",borderRadius:8,textTransform:"uppercase",letterSpacing:.5}}>étrangers</span>
                     </label>
                     <input value={form.passport||""} onChange={e=>setForm(f=>({...f,passport:e.target.value}))} placeholder="ex : AB123456"/>
+                  </div>
+                  <div className="form-group">
+                    <label>Mode de paiement</label>
+                    <select value={form.modePaiement||"especes"} onChange={e=>setForm(f=>({...f,modePaiement:e.target.value}))}>
+                      <option value="especes">💵 Espèces</option>
+                      <option value="carte">💳 Carte bancaire</option>
+                      <option value="cheque">📝 Chèque</option>
+                      <option value="virement">🏦 Virement</option>
+                    </select>
                   </div>
                 </div>
                 <div className="form-grid">
@@ -2113,7 +2206,7 @@ function App({user,onLogout}){
                       setModal({type:"prolonger",data:r,newCheckout:nextDay});
                     }}>📅 Prolonger</button>}
                   {!["cancelled","blocked","checkedout"].includes(r.status)&&<button className="btn-outline" onClick={()=>{updateStatus(r.id,"cancelled");addLog("🚫 Réservation annulée",{client:r.guest,chambre:ROOMS.find(rm=>rm.id===r.roomId)?.number});setModal({type:"detail",data:{...r,status:"cancelled"}});}}>Annuler</button>}
-                  {!r.paid&&r.status!=="blocked"&&<button className="btn-outline" onClick={()=>{markPaid(r.id);setModal({type:"detail",data:{...r,paid:true}});}}>Marquer payé</button>}
+                  {!r.paid&&r.status!=="blocked"&&<button className="btn-outline" style={{background:"#f0faf5",borderColor:"#a0d8b8",color:"#2d7a4f"}} onClick={()=>setPaiementModal({data:r,mode:"especes"})}>💰 Marquer payé</button>}
                   {!["blocked","cancelled"].includes(r.status)&&<button className="btn-outline" onClick={()=>openInvoice(r)}>Facture</button>}
                   {r.pension==="dp"&&["confirmed","checkedin"].includes(r.status)&&<button className="btn-outline" style={{background:"#fff8ee",borderColor:"#e8b84b",color:"#8a5c10"}} onClick={()=>setModal({type:"bonRestaurant",data:r})}>🍽 Bon Restaurant</button>}
                 </div>
@@ -2395,7 +2488,7 @@ function App({user,onLogout}){
                       const totalTTC_S=Math.round((n*prixTTC_S+n*extraTTC_S)*100)/100;
                       const totalHT_S=Math.round((totalTTC_S/1.07)*100)/100;
                       const num=await nextInvNum();
-                      const ok=await saveFacture({numero:num,type:'reservation',client:r.guest,phone:r.phone||null,email:r.email||null,cin:r.cin||null,reservation_id:r.id,montant_ht:totalHT_S,tva:Math.round((totalTTC_S-totalHT_S)*100)/100,timbre:1,montant_ttc:Math.round((totalTTC_S+1)*100)/100,remise:modal.remise||0,notes:r.notes||null,lignes:[{desc:"Chambre "+room?.number+" × "+n+" nuits",qty:n,prixTTC:prixTTC_S}]});
+                      const ok=await saveFacture({numero:num,type:'reservation',client:r.guest,phone:r.phone||null,email:r.email||null,cin:r.cin||null,reservation_id:r.id,montant_ht:totalHT_S,tva:Math.round((totalTTC_S-totalHT_S)*100)/100,timbre:1,montant_ttc:Math.round((totalTTC_S+1)*100)/100,remise:modal.remise||0,notes:r.notes||null,mode_paiement:r.modePaiement||'especes',lignes:[{desc:"Chambre "+room?.number+" × "+n+" nuits",qty:n,prixTTC:prixTTC_S}]});
                       if(ok){setModal(m=>({...m,saved:true,invNum:num}));showToast('Facture F-'+num+' enregistrée ✓','success');}
                       else showToast('Erreur enregistrement','error');
                     }}>💾 Enregistrer</button>
