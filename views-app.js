@@ -1246,7 +1246,7 @@ function App({user,onLogout}){
                     onChange={e=>setModal(m=>({...m,newCheckout:e.target.value}))}
                     style={{fontSize:14,padding:"9px 12px",width:"100%"}}/>
                 </div>
-                {newCo>r.checkout&&(
+                {new Date(newCo)>new Date(r.checkout)&&(
                   <div style={{background:conflit?"#fdf0f0":"#f0faf5",border:"1px solid "+(conflit?"#e0a0a0":"#a0d8b8"),borderRadius:8,padding:"10px 14px",marginBottom:16}}>
                     {conflit?(
                       <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#c95050",fontWeight:700}}>
@@ -1268,8 +1268,8 @@ function App({user,onLogout}){
                 <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
                   <button className="btn-ghost" onClick={closeModal}>Annuler</button>
                   <button className="btn-gold"
-                    disabled={!newCo||newCo<=r.checkout||!!conflit}
-                    style={{opacity:(!newCo||newCo<=r.checkout||!!conflit)?0.5:1,cursor:(!newCo||newCo<=r.checkout||!!conflit)?"not-allowed":"pointer"}}
+                    disabled={!newCo||new Date(newCo)<=new Date(r.checkout)||!!conflit}
+                    style={{opacity:(!newCo||new Date(newCo)<=new Date(r.checkout)||!!conflit)?0.5:1,cursor:(!newCo||new Date(newCo)<=new Date(r.checkout)||!!conflit)?"not-allowed":"pointer"}}
                     onClick={async()=>{
                       try{
                         const {error:pErr}=await sb.from("reservations").update({checkout:newCo}).eq("id",r.id);
