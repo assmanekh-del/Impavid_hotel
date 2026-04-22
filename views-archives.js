@@ -354,6 +354,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
         function ArchiveModal({fact}){
           const [editMode,setEditMode]=React.useState(false);
           const [showCachetPrint,setShowCachetPrint]=React.useState(true);
+          const [showRibPrint,setShowRibPrint]=React.useState(false);
           const [ed,setEd]=React.useState({
             client:fact.client||"",
             phone:fact.phone||"",
@@ -434,12 +435,18 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                       }catch(e){alert('Erreur suppression');}
                     }}>🗑 Supprimer</button>}
                     {!editMode&&(
+                      <>
                       <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontSize:12,color:"#6a5530",userSelect:"none"}}>
                         <input type="checkbox" checked={showCachetPrint} onChange={e=>setShowCachetPrint(e.target.checked)} style={{width:14,height:14}}/>
                         🏷 Cachet
                       </label>
+                      <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontSize:12,color:"#6a5530",userSelect:"none"}}>
+                        <input type="checkbox" checked={showRibPrint} onChange={e=>setShowRibPrint(e.target.checked)} style={{width:14,height:14}}/>
+                        🏦 RIB
+                      </label>
+                      </>
                     )}
-                    {!editMode&&<button className="btn-gold" onClick={()=>doPrint({...fact,lignes:fact.lignes,showCachet:showCachetPrint})}>🖨 Imprimer</button>}
+                    {!editMode&&<button className="btn-gold" onClick={()=>doPrint({...fact,lignes:fact.lignes,showCachet:showCachetPrint,showRib:showRibPrint})}>🖨 Imprimer</button>}
                   </div>
                 </div>
 
@@ -576,7 +583,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                     <p style={{fontSize:9,color:"#333",borderTop:"1px solid #ccc",paddingTop:10,marginTop:8}}>
                       {fact.type==="devis"?`Devis non contractuel, valable 30 jours — ${fact.numero}`:`Arrêtée la présente facture à la somme de : ${montantEnLettres(fact.montant_ttc||0)}`}
                     </p>
-                    <SignatureBlock showCachet={true}/>
+                    <SignatureBlock showCachet={showCachetPrint} showRib={showRibPrint}/>
                   </div>
                 )}
 

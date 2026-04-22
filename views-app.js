@@ -2298,6 +2298,8 @@ function App({user,onLogout}){
                     <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#faf8f5",border:"1px solid #e0d8cc",borderRadius:8}}>
                       <input type="checkbox" id="cachetBon" checked={showCachet} onChange={e=>setShowCachet(e.target.checked)} style={{width:16,height:16,cursor:"pointer"}}/>
                       <label htmlFor="cachetBon" style={{fontFamily:'"Jost",sans-serif',fontSize:13,color:"#2a1e08",cursor:"pointer",userSelect:"none"}}>Afficher le cachet de l'hôtel</label>
+                      <input type="checkbox" id="ribBon" checked={showRib} onChange={e=>setShowRib(e.target.checked)} style={{width:16,height:16,cursor:"pointer",marginLeft:12}}/>
+                      <label htmlFor="ribBon" style={{fontFamily:'"Jost",sans-serif',fontSize:13,color:"#2a1e08",cursor:"pointer",userSelect:"none"}}>Afficher le RIB</label>
                     </div>
                   </div>
                   <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
@@ -2314,6 +2316,7 @@ function App({user,onLogout}){
           {modal.type==="invoice"&&(()=>{
             function InvoiceModal(){
             const [showCachet,setShowCachet]=React.useState(true);
+            const [showRib,setShowRib]=React.useState(false);
             const r=modal.data;
             const room=ROOMS.find(rm=>rm.id===r.roomId);
             const n=nights(r.checkin,r.checkout);
@@ -2462,7 +2465,7 @@ function App({user,onLogout}){
                 <p style={{fontSize:10,color:"#a09080",borderTop:"1px solid #f0ebe3",paddingTop:12}}>
                   Arrêtée la présente facture à la somme de : <strong>{montantEnLettres(Math.round((totalApresRemise+1)*100)/100)}</strong>
                 </p>
-                <SignatureBlock showCachet={showCachet}/>
+                <SignatureBlock showCachet={showCachet} showRib={showRib}/>
 
                 <div className="no-print" style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginTop:16,borderTop:"1px solid #f0ebe3",paddingTop:14}}>
                   {/* Toggle cachet */}
@@ -2509,7 +2512,7 @@ function App({user,onLogout}){
                     if(!modal.saved) return;
                     const lignes=[{code:room?.type||"",desc:"Chambre "+room?.number+" × "+n+" nuits",qty:n,prixTTC:prixTTC}];
                     if(r.extraBed) lignes.push({code:"",desc:"Lit supplémentaire × "+n+" nuits",qty:n,prixTTC:30});
-                    doPrint({numero:"F-"+modal.invNum,type:"reservation",client:r.guest,phone:r.phone,email:r.email,cin:r.cin,montant_ht:totalHT,tva:tvaAmt,montant_ttc:Math.round((totalApresRemise+1)*100)/100,remise:remisePrint,notes:r.notes,lignes,created_at:new Date(),showCachet});
+                    doPrint({numero:"F-"+modal.invNum,type:"reservation",client:r.guest,phone:r.phone,email:r.email,cin:r.cin,montant_ht:totalHT,tva:tvaAmt,montant_ttc:Math.round((totalApresRemise+1)*100)/100,remise:remisePrint,notes:r.notes,lignes,created_at:new Date(),showCachet,showRib});
                   }}>🖨 Imprimer</button>
                   </div>
                 </div>
@@ -2959,7 +2962,7 @@ function App({user,onLogout}){
               <p style={{fontSize:9,color:"#a09080",borderTop:"1px solid #f0ebe3",paddingTop:10,marginTop:8}}>
                 {printData.type==="devis"?`Devis non contractuel, valable 30 jours — ${printData.numero}`:`Arrêtée la présente facture à la somme de : ${montantEnLettres(printData.montant_ttc||0)}`}
               </p>
-              <SignatureBlock showCachet={printData.showCachet!==false}/>
+              <SignatureBlock showCachet={printData.showCachet!==false} showRib={printData.showRib===true}/>
             </div>
           </div>
         );

@@ -141,9 +141,15 @@ function FreeInvoiceModal({fi,setFreeInvoice,sb,REFS,LOGO,closeModal,saveFacture
             <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,fontWeight:700,color:"#6a5a45",marginBottom:2}}>Cachet de l'établissement</p>
             <p style={{fontFamily:'"Jost",sans-serif',fontSize:10,color:"#a09080"}}>Afficher sur la facture</p>
           </div>
-          <label style={{display:"flex",alignItems:"center",gap:0,cursor:"pointer"}}>
+          <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer"}}>
             <input type="checkbox" checked={fi.showCachet!==false} onChange={e=>setFI(f=>({...f,showCachet:e.target.checked}))}
-              style={{width:36,height:20,cursor:"pointer",accentColor:"#2a3db0"}}/>
+              style={{width:20,height:20,cursor:"pointer",accentColor:"#2a3db0"}}/>
+            <span style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#6a5530"}}>Cachet</span>
+          </label>
+          <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",marginLeft:8}}>
+            <input type="checkbox" checked={fi.showRib===true} onChange={e=>setFI(f=>({...f,showRib:e.target.checked}))}
+              style={{width:20,height:20,cursor:"pointer",accentColor:"#c9952a"}}/>
+            <span style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#6a5530"}}>RIB</span>
           </label>
         </div>
       </div>
@@ -244,7 +250,7 @@ function FreeInvoiceModal({fi,setFreeInvoice,sb,REFS,LOGO,closeModal,saveFacture
           const gTTC=Math.round(lc.reduce((a,l)=>a+l.totalTTC,0)*100)/100;
           const gHT=Math.round(lc.reduce((a,l)=>a+l.totalHT,0)*100)/100;
           const rem=parseFloat(fi.remise)||0;
-          doPrint({numero:'F-'+fi.invNum,type:'libre',client:fi.client,adresse:fi.adresse,mf:fi.mf,phone:fi.phone,cin:null,showCachet:fi.showCachet!==false,montant_ht:gHT,tva:Math.round((gTTC-gHT)*100)/100,montant_ttc:Math.round((gTTC-Math.round(gTTC*(rem/100)*100)/100+1)*100)/100,remise:rem,notes:fi.notes,lignes:fi.lines,created_at:new Date()});
+          doPrint({numero:'F-'+fi.invNum,type:'libre',client:fi.client,adresse:fi.adresse,mf:fi.mf,phone:fi.phone,cin:null,showCachet:fi.showCachet!==false,showRib:fi.showRib===true,montant_ht:gHT,tva:Math.round((gTTC-gHT)*100)/100,montant_ttc:Math.round((gTTC-Math.round(gTTC*(rem/100)*100)/100+1)*100)/100,remise:rem,notes:fi.notes,lignes:fi.lines,created_at:new Date()});
         }}>🖨 Imprimer</button>
       </div>
     </div>
@@ -346,7 +352,7 @@ function FreeInvoiceModal({fi,setFreeInvoice,sb,REFS,LOGO,closeModal,saveFacture
       <p style={{fontSize:9,color:"#a09080",borderTop:"1px solid #f0ebe3",paddingTop:10,marginTop:8}}>
         Arrêtée la présente facture à la somme de : <strong>{montantEnLettres(netAPayer)}</strong>
       </p>
-      <SignatureBlock showCachet={fi.showCachet!==false}/>
+      <SignatureBlock showCachet={fi.showCachet!==false} showRib={fi.showRib===true}/>
     </div>
 
   </div>
