@@ -127,7 +127,7 @@ function App({user,onLogout}){
   // ── Charger le rôle utilisateur ──
   useEffect(()=>{
     if(user?.id){
-      sb.from('profiles').select('role').eq('id',user.id).single()
+      sb.from('profiles').select('role').eq('id',user.id).maybeSingle()
         .then(({data})=>setUserRole(data?.role||'receptionniste'));
     }
   },[user]);
