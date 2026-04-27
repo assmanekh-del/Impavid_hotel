@@ -45,7 +45,7 @@ const ROOMS = [
 const SUITES = ROOMS.filter(r=>r.type==="Suite");
 
 // Références facture
-const RIB="08 705 000 4110518 90 68 7";
+const RIB="08 705 0004110518906 87";
 const REFS=[
   // LPD (Logement + Petit Déjeuner)
   {code:"1001", label:"CHAMBRE SINGLE EN LPD",    price:100},
