@@ -2352,9 +2352,9 @@ function App({user,onLogout}){
                   <div style={{display:"flex",alignItems:"flex-start",gap:14}}>
                     <img src={LOGO} alt="Impavid" style={{height:54,width:54,objectFit:"cover",borderRadius:8,border:"1px solid #e0d8cc"}}/>
                     <div>
-                      <p style={{fontSize:12,fontWeight:700,color:"#2c2416",lineHeight:1.4}}>Société Hedi pour les services touristiques</p>
-                      <p style={{fontSize:13,fontWeight:800,color:G2,letterSpacing:1}}>SHST</p>
-                      <p style={{fontSize:15,fontWeight:700,color:G2,marginTop:2}}>IMPAVID HOTEL</p>
+                      <p style={{fontSize:16,fontWeight:800,color:"#2c2416",lineHeight:1.2}}>Société Hedi pour les services touristiques</p>
+                      <p style={{fontSize:18,fontWeight:900,color:G2,letterSpacing:2}}>SHST</p>
+                      <p style={{fontSize:11,fontWeight:500,color:"#6a5530",marginTop:2,letterSpacing:1}}>IMPAVID HOTEL — Gabès</p>
                       <p style={{fontSize:11,color:"#8a7a65",marginTop:6}}>📍 Rue Jamel Abdelnasser, Gabès 6000</p>
                       <p style={{fontSize:11,color:"#8a7a65"}}>✉ impavidhotel@gmail.com</p>
                       <p style={{fontSize:11,color:"#8a7a65"}}>MF : <strong style={{color:"#2c2416"}}>1661336G</strong></p>
@@ -2697,8 +2697,9 @@ function App({user,onLogout}){
                     <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
                       <img src={LOGO} style={{height:56,width:56,objectFit:"cover",borderRadius:8,border:"1px solid #e0d8cc"}}/>
                       <div>
-                        <p style={{fontSize:11,fontWeight:700,color:"#2c2416"}}>Société Hedi pour les services touristiques — SHST</p>
-                        <p style={{fontSize:16,fontWeight:700,color:G2,letterSpacing:1}}>IMPAVID HOTEL</p>
+                        <p style={{fontSize:15,fontWeight:800,color:"#2c2416"}}>Société Hedi pour les services touristiques</p>
+                        <p style={{fontSize:17,fontWeight:900,color:G2,letterSpacing:2}}>SHST</p>
+                        <p style={{fontSize:10,fontWeight:500,color:"#6a5530",letterSpacing:1}}>IMPAVID HOTEL — Gabès</p>
                         <p style={{fontSize:10,color:"#6a5a45",marginTop:3}}>Rue Jamel Abdelnasser, Gabès 6000</p>
                         <p style={{fontSize:10,color:"#6a5a45"}}>impavidhotel@gmail.com · MF : <strong>1661336G</strong> · Tél/Fax : 75 220 856</p>
                       </div>
@@ -2897,8 +2898,9 @@ function App({user,onLogout}){
                 <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
                   <img src={LOGO} style={{height:56,width:56,objectFit:"cover",borderRadius:8,border:"1px solid #e0d8cc"}}/>
                   <div>
-                    <p style={{fontSize:11,fontWeight:700,color:"#2c2416"}}>Société Hedi pour les services touristiques — SHST</p>
-                    <p style={{fontSize:16,fontWeight:700,color:"#000",letterSpacing:1}}>IMPAVID HOTEL</p>
+                    <p style={{fontSize:15,fontWeight:800,color:"#2c2416"}}>Société Hedi pour les services touristiques</p>
+                    <p style={{fontSize:17,fontWeight:900,color:"#8B6434",letterSpacing:2}}>SHST</p>
+                    <p style={{fontSize:10,fontWeight:500,color:"#6a5530",letterSpacing:1}}>IMPAVID HOTEL — Gabès</p>
                     <p style={{fontSize:10,color:"#6a5a45"}}>Rue Jamel Abdelnasser, Gabès 6000</p>
                     <p style={{fontSize:10,color:"#6a5a45"}}>impavidhotel@gmail.com · MF : <strong>1661336G</strong> · Tél/Fax : 75 220 856</p>
                   </div>

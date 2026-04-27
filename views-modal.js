@@ -264,8 +264,9 @@ function FreeInvoiceModal({fi,setFreeInvoice,sb,REFS,LOGO,closeModal,saveFacture
         <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
           <img src={LOGO} style={{height:56,width:56,objectFit:"cover",borderRadius:8,border:"1px solid #e0d8cc"}}/>
           <div>
-            <p style={{fontSize:11,fontWeight:700,color:"#2c2416"}}>Société Hedi pour les services touristiques — SHST</p>
-            <p style={{fontSize:16,fontWeight:700,color:G2,letterSpacing:1}}>IMPAVID HOTEL</p>
+            <p style={{fontSize:15,fontWeight:800,color:"#2c2416"}}>Société Hedi pour les services touristiques</p>
+            <p style={{fontSize:17,fontWeight:900,color:G2,letterSpacing:2}}>SHST</p>
+            <p style={{fontSize:10,fontWeight:500,color:"#6a5530",letterSpacing:1}}>IMPAVID HOTEL — Gabès</p>
             <p style={{fontSize:10,color:"#6a5a45",marginTop:3}}>Rue Jamel Abdelnasser, Gabès 6000</p>
             <p style={{fontSize:10,color:"#6a5a45"}}>impavidhotel@gmail.com · MF : <strong>1661336G</strong> · Tél/Fax : 75 220 856</p>
           </div>
