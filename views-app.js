@@ -8,6 +8,7 @@ function App({user,onLogout}){
   const [modal,setModal]=useState(null);
   const [userRole,setUserRole]=useState(null);
   const [paiementModal,setPaiementModal]=useState(null);
+  const [cancelModal,setCancelModal]=useState(null); // {numero, type, onDone}
   const [showJournal,setShowJournal]=useState(false);
   const [logs,setLogs]=useState([]);
   const [logsLoading,setLogsLoading]=useState(false);
@@ -71,21 +72,45 @@ function App({user,onLogout}){
       return false;
     }
   }
+  // Annuler une facture (garde le numéro, restaurable)
   async function cancelFacture(numero){
     try{
+      await sb.from('factures').update({
+        annulee:true,
+        annulee_par:user?.email||'inconnu',
+        annulee_at:new Date().toISOString()
+      }).eq('numero',numero);
+      sb.from('logs').insert([{user_email:user?.email||'inconnu',action:'🚫 Facture annulée',details:{numero}}]).then();
+    }catch(e){
+      console.warn('cancelFacture error:',e);
+    }
+  }
+
+  // Supprimer définitivement une facture
+  async function deleteFacture(numero){
+    try{
       await sb.from('factures').delete().eq('numero',numero);
-      // Log directement via sb car addLog peut ne pas être encore défini
-      sb.from('logs').insert([{user_email:user?.email||'inconnu',action:'🗑 Facture supprimée',details:{numero}}]).then();
+      sb.from('logs').insert([{user_email:user?.email||'inconnu',action:'🗑 Facture supprimée définitivement',details:{numero}}]).then();
       const isDevis=(numero||'').startsWith('DEV-');
       if(isDevis){
-        const resD=await sb.from('factures').select('*',{count:'exact',head:true}).like('numero','DEV-%');
+        const resD=await sb.from('factures').select('*',{count:'exact',head:true}).like('numero','DEV-%').eq('annulee',false);
         await sb.from('counters').update({val:resD.count||0}).eq('id','devis');
       }else{
-        const resF=await sb.from('factures').select('*',{count:'exact',head:true}).not('numero','ilike','DEV-%');
+        const resF=await sb.from('factures').select('*',{count:'exact',head:true}).not('numero','ilike','DEV-%').eq('annulee',false);
         await sb.from('counters').update({val:resF.count||0}).eq('id','invoice');
       }
     }catch(e){
-      console.warn('cancelFacture error:',e);
+      console.warn('deleteFacture error:',e);
+    }
+  }
+
+  // Restaurer une facture annulée
+  async function restoreFacture(numero){
+    try{
+      await sb.from('factures').update({annulee:false,annulee_par:null,annulee_at:null}).eq('numero',numero);
+      sb.from('logs').insert([{user_email:user?.email||'inconnu',action:'♻️ Facture restaurée',details:{numero}}]).then();
+    }catch(e){
+      console.warn('restoreFacture error:',e);
     }
   }
   function doPrint(data){
@@ -214,7 +239,7 @@ function App({user,onLogout}){
     return String(Math.floor(Math.random()*99999)).padStart(5,'0');
   }
   function openDevis(){
-    setDevisInfo({client:"",phone:"",checkin:"",checkout:"",notes:"",remise:0,lines:[{code:"",desc:"",qty:1,prixTTC:0}],devNum:null,saved:false});
+    setDevisInfo({client:"",phone:"",checkin:"",checkout:"",notes:"",remise:0,lines:[{code:"",desc:"",qty:1,prixTTC:0}],devNum:null,saved:false,validite:30});
     setModal({type:"devis"});
   }
 
@@ -238,7 +263,7 @@ function App({user,onLogout}){
         showToast("Réservation mise à jour ✓");
         addLog("✏️ Réservation modifiée",{client:form.guest,chambre:ROOMS.find(r=>r.id==form.roomId)?.number,checkin:form.checkin,checkout:form.checkout});
       }
-      // ── Mémorisation automatique du client ──
+      // ── Mémorisation automatique du client principal ──
       if(form.guest&&form.guest!=="BLOQUÉE"&&modal.type!=="block"){
         try{
           const {data:existing}=await sb.from('clients').select('id').eq('nom',form.guest).maybeSingle();
@@ -257,6 +282,27 @@ function App({user,onLogout}){
             }]);
           }
         }catch(e){}
+      }
+      // ── Mémorisation automatique des accompagnants ──
+      if((form.accompagnants||[]).length>0&&modal.type!=="block"){
+        for(const acc of form.accompagnants){
+          if(!acc.nom) continue;
+          try{
+            const {data:existingAcc}=await sb.from('clients').select('id').eq('nom',acc.nom).maybeSingle();
+            if(existingAcc){
+              await sb.from('clients').update({
+                cin:acc.cin||null,
+              }).eq('id',existingAcc.id);
+            } else {
+              await sb.from('clients').insert([{
+                nom:acc.nom,
+                cin:acc.cin||null,
+                email:null,
+                phone:null,
+              }]);
+            }
+          }catch(e){}
+        }
       }
       setModal(null);
     }catch(e){showToast("Erreur lors de l'enregistrement","error");}
@@ -373,13 +419,18 @@ function App({user,onLogout}){
       .modal{display:none!important}
       .print-a4{display:none!important}
       /* Zone impression globale (facture/devis/bons) */
-      #print-zone{display:block!important;background:#fff!important;position:fixed;top:0;left:0;width:210mm;min-height:297mm;z-index:9999}
+      #print-zone{display:block!important;background:#fff!important;position:absolute;top:0;left:0;width:210mm;min-height:auto;z-index:9999}
       #print-zone *{background-color:transparent}
-      #print-zone .print-a4{display:block!important;background:#fff!important;width:210mm;min-height:297mm;padding:12mm 14mm;box-sizing:border-box;font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000;margin:0}
+      #print-zone .print-a4{display:block!important;background:#fff!important;width:210mm;min-height:auto;padding:12mm 14mm;box-sizing:border-box;font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000;margin:0}
       /* Zone impression dans modaux (facture réservation, facture libre, devis) */
       .print-only{display:none!important}
-      .print-only.print-a4{display:block!important;background:#fff!important;position:fixed;top:0;left:0;width:210mm;min-height:297mm;padding:12mm 14mm;box-sizing:border-box;font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000;margin:0;z-index:9999}
-      @page{size:A4 portrait;margin:0}
+      .print-only.print-a4{display:block!important;background:#fff!important;position:static;top:auto;left:auto;width:210mm;min-height:auto;padding:12mm 14mm;box-sizing:border-box;font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000;margin:0;z-index:9999}
+      /* Eviter coupure sur éléments clés */
+      table{page-break-inside:auto}
+      tr{page-break-inside:avoid;page-break-after:auto}
+      thead{display:table-header-group}
+      tfoot{display:table-footer-group}
+      @page{size:A4 portrait;margin:10mm 14mm}
     }
     .print-only{display:none}
     .print-a4{display:none}
@@ -420,6 +471,7 @@ function App({user,onLogout}){
             ["historique","📒","Historique"],
             ["archives","📁","Archives"],
             ["groupes","🏢","Groupes"],
+            ["clients-societes","📋","Fichier Clients"],
             ["police","📋","Livre de Police"],
             ["contrats","🤝","Contrats"],
             ["charges","💸","Charges"],
@@ -1219,7 +1271,7 @@ function App({user,onLogout}){
         })()}
 
         {/* ── ARCHIVES FACTURES ── */}
-        {view==="archives"&&<ArchivesView sb={sb} openDetail={openDetail} ROOMS={ROOMS} LOGO={LOGO} G2="#8B6434" doPrint={doPrint} setModal={setModal}/>}
+        {view==="archives"&&<ArchivesView sb={sb} openDetail={openDetail} ROOMS={ROOMS} LOGO={LOGO} G2="#8B6434" doPrint={doPrint} setModal={setModal} restoreFacture={restoreFacture} showToast={showToast} REFS={REFS}/>}
         {/* ══ MODAL MODE DE PAIEMENT ══ */}
         {paiementModal&&(()=>{
           const r=paiementModal.data;
@@ -1303,6 +1355,7 @@ function App({user,onLogout}){
           </div>
         )}
 
+        {view==="clients-societes"&&<FichierClientsView sb={sb} showToast={showToast}/>}
         {view==="groupes"&&<GroupesView sb={sb} ROOMS={ROOMS} reservations={reservations} setReservations={setReservations} showToast={showToast} doPrint={doPrint} montantEnLettres={montantEnLettres} SignatureBlock={SignatureBlock} LOGO={LOGO} saveFacture={saveFacture} nextInvNum={nextInvNum} userEmail={user?.email}/>}
         {view==="police"&&<LivreDePolice reservations={reservations} ROOMS={ROOMS} LOGO={LOGO}/>}
         {view==="contrats"&&<ContratsView sb={sb}/>}
@@ -1745,7 +1798,7 @@ function App({user,onLogout}){
                 <div className="form-grid">
                   <div className="form-group">
                     <label>Nationalité</label>
-                    <select value={form.nationality||""} onChange={e=>setForm(f=>({...f,nationality:e.target.value}))}>
+                    <select value={["","Tunisienne","Algérienne","Marocaine","Libyenne","Française","Italienne","Allemande","Espagnole","Britannique","Belge","Suisse","Américaine"].includes(form.nationality||"")?form.nationality||"":" autre"} onChange={e=>{if(e.target.value!==" autre")setForm(f=>({...f,nationality:e.target.value}));else setForm(f=>({...f,nationality:""}));}}>
                       <option value="">— Choisir —</option>
                       <option>Tunisienne</option>
                       <option>Algérienne</option>
@@ -1759,8 +1812,11 @@ function App({user,onLogout}){
                       <option>Belge</option>
                       <option>Suisse</option>
                       <option>Américaine</option>
-                      <option>Autre</option>
+                      <option value=" autre">✏️ Autre...</option>
                     </select>
+                    {!["","Tunisienne","Algérienne","Marocaine","Libyenne","Française","Italienne","Allemande","Espagnole","Britannique","Belge","Suisse","Américaine"].includes(form.nationality||"")&&(
+                      <input value={form.nationality||""} onChange={e=>setForm(f=>({...f,nationality:e.target.value}))} placeholder="Saisir la nationalité..." style={{marginTop:6,fontSize:12,padding:"6px 10px",width:"100%"}}/>
+                    )}
                   </div>
                   <div className="form-group">
                     <label>Date de naissance</label>
@@ -1858,7 +1914,46 @@ function App({user,onLogout}){
                           }} style={{background:"#fdf0f0",border:"1px solid #e0a0a0",color:"#9a2020",borderRadius:4,padding:"2px 8px",cursor:"pointer",fontSize:11}}>✕</button>
                         </div>
                         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                          {[["Nom & Prénom","nom","ex : Ben Ali Mohamed"],["Nationalité","nationalite","ex : Tunisienne"],["CIN","cin","ex : 12345678"],["Passeport","passport","ex : AB123456"],["Profession","profession","ex : Ingénieur"],["Provenance","provenance","ex : Sfax"]].map(([lbl,key,ph])=>(
+                          <div>
+                            <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>Nom & Prénom</label>
+                            <GuestAutocomplete
+                              value={acc.nom||""}
+                              onChange={val=>{const a=[...(form.accompagnants||[])];a[idx]={...a[idx],nom:val};setForm(f=>({...f,accompagnants:a}));}}
+                              onSelect={c=>{const a=[...(form.accompagnants||[])];a[idx]={...a[idx],nom:c.nom,cin:c.cin||a[idx].cin};setForm(f=>({...f,accompagnants:a}));}}
+                              sb={sb}
+                            />
+                          </div>
+                          <div>
+                            <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>Nationalité</label>
+                            <select value={["Tunisienne","Algérienne","Marocaine","Libyenne","Française","Italienne","Allemande","Espagnole","Britannique","Belge","Suisse","Américaine"].includes(acc.nationalite||"")?acc.nationalite||"":" autre"} onChange={e=>{
+                              const a=[...(form.accompagnants||[])];
+                              a[idx]={...a[idx],nationalite:e.target.value===" autre"?"":e.target.value};
+                              setForm(f=>({...f,accompagnants:a}));
+                            }} style={{width:"100%",fontSize:11,padding:"5px 8px"}}>
+                              <option value="">— Choisir —</option>
+                              <option>Tunisienne</option>
+                              <option>Algérienne</option>
+                              <option>Marocaine</option>
+                              <option>Libyenne</option>
+                              <option>Française</option>
+                              <option>Italienne</option>
+                              <option>Allemande</option>
+                              <option>Espagnole</option>
+                              <option>Britannique</option>
+                              <option>Belge</option>
+                              <option>Suisse</option>
+                              <option>Américaine</option>
+                              <option value=" autre">✏️ Autre...</option>
+                            </select>
+                            {!["Tunisienne","Algérienne","Marocaine","Libyenne","Française","Italienne","Allemande","Espagnole","Britannique","Belge","Suisse","Américaine"].includes(acc.nationalite||"")&&acc.nationalite&&(
+                              <input value={acc.nationalite||""} onChange={e=>{
+                                const a=[...(form.accompagnants||[])];
+                                a[idx]={...a[idx],nationalite:e.target.value};
+                                setForm(f=>({...f,accompagnants:a}));
+                              }} placeholder="Saisir la nationalité..." style={{marginTop:4,width:"100%",fontSize:11,padding:"5px 8px"}}/>
+                            )}
+                          </div>
+                          {[["CIN","cin","ex : 12345678"],["Passeport","passport","ex : AB123456"],["Profession","profession","ex : Ingénieur"],["Provenance","provenance","ex : Sfax"]].map(([lbl,key,ph])=>(
                             <div key={key}>
                               <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>{lbl}</label>
                               <input value={acc[key]||""} onChange={e=>{
@@ -2499,11 +2594,8 @@ function App({user,onLogout}){
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <span style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#2a8a5a",fontWeight:700}}>✓ F-{modal.invNum}</span>
                       {userRole==="gerant"&&(
-                        <button className="btn-red" style={{fontSize:11,padding:"5px 12px"}} onClick={async()=>{
-                          if(!confirm('Annuler et supprimer la facture F-'+modal.invNum+' ?')) return;
-                          await cancelFacture(modal.invNum);
-                          setModal(m=>({...m,saved:false,invNum:undefined}));
-                          showToast('Facture annulée','error');
+                        <button className="btn-red" style={{fontSize:11,padding:"5px 12px"}} onClick={()=>{
+                          setCancelModal({numero:'F-'+modal.invNum,onDone:()=>{setModal(m=>({...m,saved:false,invNum:undefined}));showToast('Facture annulée','error');}});
                         }}>✕ Annuler</button>
                       )}
                     </div>
@@ -2537,6 +2629,7 @@ function App({user,onLogout}){
               SignatureBlock={SignatureBlock}
               nextInvNum={nextInvNum}
               userRole={userRole}
+              setCancelModal={setCancelModal}
             />
           )}
 
@@ -2634,6 +2727,17 @@ function App({user,onLogout}){
                       <label style={{display:"block",fontSize:10,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:4,fontFamily:'"Jost",sans-serif'}}>Notes</label>
                       <input value={di.notes||""} onChange={e=>setDI(f=>({...f,notes:e.target.value}))} placeholder="Conditions particulières..." style={{fontSize:12,padding:"7px 10px"}}/>
                     </div>
+                    <div>
+                      <label style={{display:"block",fontSize:10,fontWeight:700,color:"#8a7a65",textTransform:"uppercase",letterSpacing:.8,marginBottom:4,fontFamily:'"Jost",sans-serif'}}>Validité (jours)</label>
+                      <select value={di.validite||30} onChange={e=>setDI(f=>({...f,validite:parseInt(e.target.value)}))} style={{fontSize:12,padding:"7px 10px"}}>
+                        <option value={7}>7 jours</option>
+                        <option value={15}>15 jours</option>
+                        <option value={30}>30 jours</option>
+                        <option value={45}>45 jours</option>
+                        <option value={60}>60 jours</option>
+                        <option value={90}>90 jours</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* Totaux aperçu */}
@@ -2668,11 +2772,8 @@ function App({user,onLogout}){
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
                         <span style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#2a8a5a",fontWeight:700}}>✓ {di.devNum}</span>
                         {userRole==="gerant"&&(
-                          <button className="btn-red" style={{fontSize:11,padding:"5px 12px"}} onClick={async()=>{
-                            if(!confirm('Annuler et supprimer le devis '+di.devNum+' ?')) return;
-                            await cancelFacture(di.devNum);
-                            setDI(f=>({...f,saved:false}));
-                            showToast('Devis annulé','error');
+                          <button className="btn-red" style={{fontSize:11,padding:"5px 12px"}} onClick={()=>{
+                            setCancelModal({numero:di.devNum,onDone:()=>{setDI(f=>({...f,saved:false}));showToast('Devis annulé','error');}});
                           }}>✕ Annuler</button>
                         )}
                       </div>
@@ -2685,7 +2786,7 @@ function App({user,onLogout}){
                       const rem2=parseFloat(di.remise)||0;
                       const remMont2=Math.round(gTTC2*(rem2/100)*100)/100;
                       const net2=Math.round((gTTC2-remMont2)*100)/100;
-                      doPrint({numero:di.devNum,type:'devis',client:di.client,phone:di.phone,montant_ht:gHT2,tva:Math.round((gTTC2-gHT2)*100)/100,montant_ttc:net2,remise:rem2,notes:di.notes,lignes:di.lines,created_at:new Date()});
+                      doPrint({numero:di.devNum,type:'devis',client:di.client,phone:di.phone,montant_ht:gHT2,tva:Math.round((gTTC2-gHT2)*100)/100,montant_ttc:net2,remise:rem2,notes:di.notes,lignes:di.lines,created_at:new Date(),validite:di.validite||30});
                     }}>🖨 Imprimer</button>
                   </div>
                 </div>
@@ -2759,7 +2860,7 @@ function App({user,onLogout}){
 
                   {di.notes&&<p style={{fontSize:10,color:"#6a5a45",background:"#faf8f5",padding:"8px 12px",borderRadius:6,marginBottom:12,borderLeft:"3px solid #c0a870"}}><strong>Notes :</strong> {di.notes}</p>}
                   <p style={{fontSize:9,color:"#a09080",borderTop:"1px solid #f0ebe3",paddingTop:10,marginTop:8}}>
-                    Arrêtée la présente estimation à : <strong>{montantEnLettres(netAPayer)}</strong> — Devis non contractuel, valable 30 jours.
+                    Arrêtée la présente estimation à : <strong>{montantEnLettres(netAPayer)}</strong> — Devis non contractuel, valable {di.validite||30} jours.
                   </p>
                   <SignatureBlock/>
                 </div>
@@ -2962,7 +3063,7 @@ function App({user,onLogout}){
               </div>
               {printData.notes&&<p style={{fontSize:10,color:"#6a5a45",background:"#faf8f5",padding:"8px 12px",borderRadius:6,marginBottom:12,borderLeft:"3px solid #c0a870"}}><strong>Notes :</strong> {printData.notes}</p>}
               <p style={{fontSize:9,color:"#a09080",borderTop:"1px solid #f0ebe3",paddingTop:10,marginTop:8}}>
-                {printData.type==="devis"?`Devis non contractuel, valable 30 jours — ${printData.numero}`:`Arrêtée la présente facture à la somme de : ${montantEnLettres(printData.montant_ttc||0)}`}
+                {printData.type==="devis"?`Devis non contractuel, valable ${printData.validite||30} jours — ${printData.numero}`:`Arrêtée la présente facture à la somme de : ${montantEnLettres(printData.montant_ttc||0)}`}
               </p>
               <SignatureBlock showCachet={printData.showCachet!==false} showRib={printData.showRib===true}/>
             </div>
@@ -3064,6 +3165,39 @@ function App({user,onLogout}){
           );
         })(),document.body)}
 
+    {/* ══ MODAL CONFIRMATION ANNULATION/SUPPRESSION FACTURE ══ */}
+    {cancelModal&&ReactDOM.createPortal(
+      <div style={{position:"fixed",inset:0,background:"rgba(42,30,8,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}} onClick={()=>setCancelModal(null)}>
+        <div style={{background:"#fff",borderRadius:12,padding:"28px 32px",maxWidth:420,width:"100%",boxShadow:"0 8px 40px rgba(42,30,8,0.18)"}} onClick={e=>e.stopPropagation()}>
+          <h2 style={{fontSize:20,fontWeight:600,color:"#9a2020",marginBottom:8,fontFamily:'"Cormorant Garamond",serif'}}>⚠️ {cancelModal.numero}</h2>
+          <p style={{fontFamily:'"Jost",sans-serif',fontSize:13,color:"#6a5530",marginBottom:24}}>Que voulez-vous faire avec cette facture ?</p>
+          <div style={{display:"grid",gap:10}}>
+            <button style={{padding:"12px 16px",borderRadius:8,border:"2px solid #e8a000",background:"#fff8ee",cursor:"pointer",textAlign:"left"}}
+              onClick={async()=>{
+                await cancelFacture(cancelModal.numero);
+                cancelModal.onDone&&cancelModal.onDone();
+                setCancelModal(null);
+              }}>
+              <p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:700,color:"#8a5c10",marginBottom:2}}>🚫 Annuler la facture</p>
+              <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#b07d1a"}}>Le numéro est conservé — facture restaurable depuis les archives</p>
+            </button>
+            <button style={{padding:"12px 16px",borderRadius:8,border:"2px solid #e0a0a0",background:"#fdf0f0",cursor:"pointer",textAlign:"left"}}
+              onClick={async()=>{
+                if(!confirm("Supprimer DÉFINITIVEMENT "+cancelModal.numero+" ? Cette action est irréversible.")) return;
+                await deleteFacture(cancelModal.numero);
+                cancelModal.onDone&&cancelModal.onDone();
+                setCancelModal(null);
+              }}>
+              <p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:700,color:"#9a2020",marginBottom:2}}>🗑 Supprimer définitivement</p>
+              <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#c05050"}}>Le numéro sera perdu — action irréversible</p>
+            </button>
+            <button className="btn-ghost" onClick={()=>setCancelModal(null)}>Retour</button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+
     {showJournal&&(
       <>
         {/* Overlay */}
@@ -3139,3 +3273,4 @@ function App({user,onLogout}){
   </>
   );
 }
+// placeholder

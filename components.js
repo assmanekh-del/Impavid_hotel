@@ -117,8 +117,8 @@ function SignatureBlock({showCachet=true,showRib=false}){
       {/* RIB bancaire */}
       {showRib&&(
         <div style={{marginBottom:16,padding:"10px 14px",background:"#f5f0e8",border:"1px solid #e0d0b0",borderRadius:8,borderLeft:"3px solid #c9952a"}}>
-          <p style={{fontSize:10,fontWeight:700,color:"#8B6434",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>RIB</p>
-          <p style={{fontSize:15,color:"#2c2416",fontFamily:"monospace",letterSpacing:2,fontWeight:700}}>{RIB}</p>
+          <p style={{fontSize:9,fontWeight:700,color:"#8B6434",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>RIB</p>
+          <p style={{fontSize:10,color:"#2c2416",fontFamily:"monospace",letterSpacing:1,fontWeight:600}}>{RIB}</p>
           <p style={{fontSize:8,color:"#8a7040",marginTop:2}}>Titulaire : Société Hedi pour les services touristiques — SHST</p>
         </div>
       )}

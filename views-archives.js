@@ -1,4 +1,4 @@
-function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
+function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal,restoreFacture,showToast,REFS}){
   const [factures,setFactures]=React.useState([]);
   const [loading,setLoading]=React.useState(true);
   const [search,setSearch]=React.useState("");
@@ -156,9 +156,16 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
               </div>
               <p style={{fontFamily:'"Jost",sans-serif',fontSize:14,fontWeight:700,color:"#2a1e08",textAlign:"right"}}>{(f.montant_ttc||0).toFixed(3)}<span style={{fontSize:9,color:"#8a7040",marginLeft:2}}>TND</span></p>
               <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                {f.annulee?(
+                  <div style={{display:"flex",gap:6,flex:1}}>
+                    <span style={{fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#9a2020",background:"#fdf0f0",padding:"4px 8px",borderRadius:6,border:"1px solid #e0a0a0"}}>🚫 Annulée</span>
+                    {restoreFacture&&<button style={{fontSize:11,padding:"4px 10px",background:"#f0faf5",border:"1.5px solid #a0d8b8",color:"#2d7a4f",borderRadius:6,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontWeight:600}} onClick={async()=>{await restoreFacture(f.numero);showToast&&showToast('Facture restaurée ✓');}}>♻️ Restaurer</button>}
+                  </div>
+                ):(
                 <button style={{flex:1,fontSize:11,padding:"6px 8px",background:"#fef9f0",border:"1.5px solid #d4c5a0",color:"#6a5530",borderRadius:6,cursor:"pointer",fontFamily:'"Jost",sans-serif',fontWeight:600,letterSpacing:.5}} onClick={()=>setModalFact(f)}>
                   🖨 Imprimer
                 </button>
+                )}
                 <button title="Annuler cette facture" style={{padding:"6px 9px",background:"#fdf0f0",border:"1.5px solid #e0a0a0",color:"#9a2020",borderRadius:6,cursor:"pointer",fontSize:13,fontWeight:700,lineHeight:1}} onClick={async()=>{
                   if(!confirm('Supprimer la facture '+f.numero+' des archives ?\n\nCette action est irréversible.')) return;
                   try{
@@ -193,6 +200,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
         function printSuivi(){
           const G2b="#8B6434";
           // Construire HTML du rapport
+          const totalTimbre=Math.round(listeSuivi.filter(f=>f.type!=="devis").length*1000)/1000;
           const rows=listeSuivi.map((f,i)=>`
             <tr style="border-bottom:1px solid #f0ebe3;background:${i%2===0?"#fff":"#faf8f5"}">
               <td style="padding:6px 8px;font-size:10px;color:#8a7040">${new Date(f.created_at).toLocaleDateString("fr-FR")}</td>
@@ -200,16 +208,8 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
               <td style="padding:6px 8px;font-size:10px;color:#2c2416">${f.client||"—"}</td>
               <td style="padding:6px 8px;font-size:10px;text-align:right">${(f.montant_ht||0).toFixed(3)}</td>
               <td style="padding:6px 8px;font-size:10px;text-align:right">${(f.tva||0).toFixed(3)}</td>
+              <td style="padding:6px 8px;font-size:10px;text-align:right">${(f.timbre||0).toFixed(3)}</td>
               <td style="padding:6px 8px;font-size:10px;text-align:right;font-weight:700">${(f.montant_ttc||0).toFixed(3)}</td>
-              <td style="padding:6px 8px;font-size:10px;text-align:center">${f.echeance?new Date(f.echeance).toLocaleDateString("fr-FR"):"—"}</td>
-              <td style="padding:6px 8px;font-size:10px;text-align:center">
-                <span style="background:${f.paid?"#d4f0e0":"#fad4d4"};color:${f.paid?"#2d7a4f":"#9a2020"};padding:2px 6px;border-radius:8px;font-size:9px;font-weight:700">
-                  ${f.paid?"✓ Payé":"À encaisser"}
-                </span>
-              </td>
-              <td style="padding:6px 8px;font-size:10px;text-align:center">
-                ${{especes:"💵 Espèces",carte:"💳 Carte",cheque:"📝 Chèque",virement:"🏦 Virement"}[f.mode_paiement||"especes"]||"💵 Espèces"}
-              </td>
             </tr>
           `).join("");
           const html=`
@@ -231,7 +231,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
             <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:16px">
               <thead>
                 <tr style="background:#2c2416;color:#f5d984">
-                  ${["Date","N° Facture","Client","HT (TND)","TVA (TND)","TTC (TND)","Échéance","Statut","Paiement"].map(h=>`<th style="padding:8px;text-align:${["HT (TND)","TVA (TND)","TTC (TND)"].includes(h)?"right":"left"};font-size:9px;letter-spacing:0.5px">${h}</th>`).join("")}
+                  ${["Date","N° Facture","Client","HT (TND)","TVA (TND)","Timbre","TTC (TND)"].map(h=>`<th style="padding:8px;text-align:${["HT (TND)","TVA (TND)","Timbre","TTC (TND)"].includes(h)?"right":"left"};font-size:9px;letter-spacing:0.5px">${h}</th>`).join("")}
                 </tr>
               </thead>
               <tbody>${rows}</tbody>
@@ -240,8 +240,8 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                   <td colspan="3" style="padding:8px;font-size:11px">TOTAL — ${listeSuivi.length} facture${listeSuivi.length>1?"s":""}</td>
                   <td style="padding:8px;text-align:right;font-size:11px">${totalHT.toFixed(3)}</td>
                   <td style="padding:8px;text-align:right;font-size:11px">${totalTVA.toFixed(3)}</td>
+                  <td style="padding:8px;text-align:right;font-size:11px">${totalTimbre.toFixed(3)}</td>
                   <td style="padding:8px;text-align:right;font-size:13px">${totalTTC.toFixed(3)}</td>
-                  <td colspan="2"></td>
                 </tr>
               </tfoot>
             </table>
@@ -489,8 +489,19 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal}){
                         <tbody>
                           {ed.lignes.map((l,i)=>(
                             <tr key={i} style={{borderBottom:"1px solid #f0ebe3"}}>
-                              <td style={{padding:"4px 4px"}}><input value={l.code||""} onChange={e=>{const nl=[...ed.lignes];nl[i]={...nl[i],code:e.target.value};setEd(x=>({...x,lignes:nl}));}} style={{width:60,fontSize:11,padding:"4px 6px"}}/></td>
-                              <td style={{padding:"4px 4px"}}><input value={l.desc||""} onChange={e=>{const nl=[...ed.lignes];nl[i]={...nl[i],desc:e.target.value};setEd(x=>({...x,lignes:nl}));}} style={{width:"100%",fontSize:11,padding:"4px 6px"}}/></td>
+                              <td style={{padding:"4px 4px"}}>
+                                <select value={l.code||""} onChange={e=>{
+                                  const nl=[...ed.lignes];
+                                  const ref=REFS.find(r=>r.code===e.target.value);
+                                  nl[i]={...nl[i],code:e.target.value,desc:ref?ref.label:nl[i].desc,prixTTC:ref?ref.prixTTC:nl[i].prixTTC};
+                                  setEd(x=>({...x,lignes:nl}));
+                                }} style={{width:110,fontSize:11,padding:"4px 6px"}}>
+                                  <option value="">— Réf —</option>
+                                  {REFS.map(r=><option key={r.code} value={r.code}>{r.code}</option>)}
+                                  <option value="AUTRE">Autre</option>
+                                </select>
+                              </td>
+                              <td style={{padding:"4px 4px"}}><input value={l.desc||""} onChange={e=>{const nl=[...ed.lignes];nl[i]={...nl[i],desc:e.target.value};setEd(x=>({...x,lignes:nl}));}} placeholder={l.code&&l.code!=="AUTRE"?"":""} style={{width:"100%",fontSize:11,padding:"4px 6px"}}/></td>
                               <td style={{padding:"4px 4px"}}><input type="number" value={l.qty||1} onChange={e=>{const nl=[...ed.lignes];nl[i]={...nl[i],qty:e.target.value};setEd(x=>({...x,lignes:nl}));}} style={{width:50,fontSize:11,padding:"4px 6px",textAlign:"right"}}/></td>
                               <td style={{padding:"4px 4px"}}><input type="number" value={l.prixTTC||0} onChange={e=>{const nl=[...ed.lignes];nl[i]={...nl[i],prixTTC:e.target.value};setEd(x=>({...x,lignes:nl}));}} style={{width:80,fontSize:11,padding:"4px 6px",textAlign:"right"}}/></td>
                               <td style={{padding:"4px 4px",textAlign:"center"}}><button onClick={()=>{const nl=ed.lignes.filter((_,j)=>j!==i);setEd(x=>({...x,lignes:nl}));}} style={{background:"#fdf0f0",border:"1px solid #e0a0a0",color:"#9a2020",borderRadius:4,padding:"2px 7px",cursor:"pointer",fontSize:12}}>×</button></td>

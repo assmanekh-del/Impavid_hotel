@@ -1,4 +1,4 @@
-function FreeInvoiceModal({fi,setFreeInvoice,sb,REFS,LOGO,closeModal,saveFacture,cancelFacture,showToast,doPrint,montantEnLettres,SignatureBlock,nextInvNum,userRole}){
+function FreeInvoiceModal({fi,setFreeInvoice,sb,REFS,LOGO,closeModal,saveFacture,cancelFacture,showToast,doPrint,montantEnLettres,SignatureBlock,nextInvNum,userRole,setCancelModal}){
   const setFI=fn=>setFreeInvoice(f=>fn(f));
   const G2="#8B6434";
   const [clients,setClients]=React.useState([]);
@@ -151,6 +151,7 @@ function FreeInvoiceModal({fi,setFreeInvoice,sb,REFS,LOGO,closeModal,saveFacture
               style={{width:20,height:20,cursor:"pointer",accentColor:"#c9952a"}}/>
             <span style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#6a5530"}}>RIB</span>
           </label>
+
         </div>
       </div>
       {/* Lignes */}
@@ -235,11 +236,8 @@ function FreeInvoiceModal({fi,setFreeInvoice,sb,REFS,LOGO,closeModal,saveFacture
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#2a8a5a",fontWeight:700}}>✓ F-{fi.invNum}</span>
             {userRole==="gerant"&&(
-              <button className="btn-red" style={{fontSize:11,padding:"5px 12px"}} onClick={async()=>{
-                if(!confirm('Annuler et supprimer la facture F-'+fi.invNum+' ?')) return;
-                await cancelFacture(fi.invNum);
-                setFI(f=>({...f,saved:false,invNum:undefined}));
-                showToast('Facture annulée','error');
+              <button className="btn-red" style={{fontSize:11,padding:"5px 12px"}} onClick={()=>{
+                setCancelModal&&setCancelModal({numero:'F-'+fi.invNum,onDone:()=>{setFI(f=>({...f,saved:false,invNum:undefined}));showToast('Facture annulée','error');}});
               }}>✕ Annuler</button>
             )}
           </div>

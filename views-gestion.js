@@ -279,7 +279,7 @@ function ChargesView({sb,LOGO}){
   const [loading,setLoading]=useState(true);
   const [modal,setModal]=useState(null); // null | "new" | "edit"
   const [form,setForm]=useState({});
-  const [filterMois,setFilterMois]=useState(String(new Date().getMonth()+1).padStart(2,'0'));
+  const [filterMois,setFilterMois]=useState("");
   const [filterAnnee,setFilterAnnee]=useState(String(new Date().getFullYear()));
   const [filterCat,setFilterCat]=useState("all");
   const [filterStatut,setFilterStatut]=useState("all");
@@ -298,8 +298,60 @@ function ChargesView({sb,LOGO}){
     setLoading(false);
   }
 
+  function printSuiviCharges(){
+    const G2b="#8B6434";
+    const totalHT=Math.round(liste.reduce((a,c)=>a+(c.montant_ht||0),0)*1000)/1000;
+    const totalTVA=Math.round(liste.reduce((a,c)=>a+(c.tva||0),0)*1000)/1000;
+    const totalTTC=Math.round(liste.reduce((a,c)=>a+(c.montant_ttc||0),0)*1000)/1000;
+    const rows=liste.map((c,i)=>`
+      <tr style="border-bottom:1px solid #f0ebe3;background:${i%2===0?"#fff":"#faf8f5"}">
+        <td style="padding:6px 8px;font-size:10px;color:#8a7040">${new Date(c.date).toLocaleDateString("fr-FR")}</td>
+        <td style="padding:6px 8px;font-size:10px;font-weight:600;color:#2c2416">${c.fournisseur||"—"}${c.numero_facture?`<br/><span style="font-size:9px;color:#8a7040">N° ${c.numero_facture}</span>`:""}</td>
+        <td style="padding:6px 8px;font-size:10px;color:#6a5530">${c.description||"—"}</td>
+        <td style="padding:6px 8px;font-size:10px;color:#8a7040">${c.categorie||"—"}</td>
+        <td style="padding:6px 8px;font-size:10px;text-align:right">${(c.montant_ht||0).toFixed(3)}</td>
+        <td style="padding:6px 8px;font-size:10px;text-align:right">${(c.tva||0).toFixed(3)}</td>
+        <td style="padding:6px 8px;font-size:10px;text-align:right">${(c.timbre||0)>0?(c.timbre||0).toFixed(3):"—"}</td>
+        <td style="padding:6px 8px;font-size:10px;text-align:right;font-weight:700">${((c.montant_ttc||0)+(c.timbre||0)).toFixed(3)}</td>
+      </tr>
+    `).join("");
+    const html=`<html><head><meta charset="UTF-8"/>
+      <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000;padding:14mm 16mm}@page{size:A4 portrait;margin:0}table{width:100%;border-collapse:collapse}</style>
+      </head><body>
+      <div style="border-bottom:2px solid ${G2b};padding-bottom:12px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <p style="font-size:15px;font-weight:800;color:#2c2416">Société Hedi pour les services touristiques</p>
+          <p style="font-size:17px;font-weight:900;color:${G2b};letter-spacing:2px">SHST</p>
+          <p style="font-size:9px;color:#6a5a45">IMPAVID HOTEL — Gabès · MF : 1661336G</p>
+        </div>
+        <div style="text-align:right">
+          <p style="font-size:14px;font-weight:800;color:#2c2416">SUIVI DES CHARGES</p>
+          <p style="font-size:10px;color:#8a7a65;margin-top:4px">Édité le ${new Date().toLocaleDateString("fr-FR")}</p>
+          <p style="font-size:10px;color:#8a7a65">${liste.length} charge${liste.length>1?"s":""}</p>
+        </div>
+      </div>
+      <table style="margin-bottom:16px">
+        <thead><tr style="background:#2c2416;color:#f5d984">
+          ${["Date","Fournisseur","Description","Catégorie","HT (TND)","TVA (TND)","Timbre","Total TTC"].map(h=>`<th style="padding:8px;text-align:${["HT (TND)","TVA (TND)","Timbre","Total TTC"].includes(h)?"right":"left"};font-size:9px">${h}</th>`).join("")}
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr style="background:${G2b};color:#fff;font-weight:700">
+          <td colspan="4" style="padding:8px;font-size:11px">TOTAL — ${liste.length} charge${liste.length>1?"s":""}</td>
+          <td style="padding:8px;text-align:right;font-size:11px">${totalHT.toFixed(3)}</td>
+          <td style="padding:8px;text-align:right;font-size:11px">${totalTVA.toFixed(3)}</td>
+          <td style="padding:8px;text-align:right;font-size:11px">${Math.round(liste.reduce((a,c)=>a+(c.timbre||0),0)*1000)/1000}</td>
+          <td style="padding:8px;text-align:right;font-size:13px">${totalTTC.toFixed(3)}</td>
+        </tr></tfoot>
+      </table>
+      <p style="font-size:8px;color:#a09080;border-top:1px solid #e0d8cc;padding-top:8px">Document généré automatiquement — IMPAVID HOTEL</p>
+      </body></html>`;
+    const w=window.open("","_blank","width=900,height=700");
+    w.document.write(html);w.document.close();w.focus();
+    setTimeout(()=>w.print(),500);
+  }
+
   function openNew(){
-    setForm({date:getToday(),fournisseur:"",description:"",categorie:"Électricité",montant_ht:0,tva:0,montant_ttc:0,statut:"a_payer",notes:"",numero_facture:"",mode_paiement:"especes"});
+    setForm({date:getToday(),fournisseur:"",description:"",categorie:"Électricité",montant_ht:0,tva:0,montant_ttc:0,timbre:0,statut:"a_payer",notes:"",numero_facture:"",mode_paiement:"especes"});
     setModal("new");
   }
 
@@ -320,6 +372,7 @@ function ChargesView({sb,LOGO}){
       montant_ht:parseFloat(form.montant_ht)||0,
       tva:parseFloat(form.tva)||0,
       montant_ttc:parseFloat(form.montant_ttc)||0,
+      timbre:parseFloat(form.timbre)||0,
       statut:form.statut||"a_payer",
       notes:form.notes||null,
     };
@@ -365,8 +418,8 @@ function ChargesView({sb,LOGO}){
     return matchMois&&matchAnnee&&matchCat&&matchStatut;
   });
 
-  const totalTTC=Math.round(liste.reduce((a,c)=>a+(c.montant_ttc||0),0)*1000)/1000;
-  const totalPaye=Math.round(liste.filter(c=>c.statut==="paye").reduce((a,c)=>a+(c.montant_ttc||0),0)*1000)/1000;
+  const totalTTC=Math.round(liste.reduce((a,c)=>a+(c.montant_ttc||0)+(c.timbre||0),0)*1000)/1000;
+  const totalPaye=Math.round(liste.filter(c=>c.statut==="paye").reduce((a,c)=>a+(c.montant_ttc||0)+(c.timbre||0),0)*1000)/1000;
   const totalAPayer=Math.round((totalTTC-totalPaye)*1000)/1000;
 
   // Couleurs catégories
@@ -387,7 +440,10 @@ function ChargesView({sb,LOGO}){
           <p className="section-title">💸 Charges</p>
           <p className="section-sub">{liste.length} charge{liste.length>1?"s":""}</p>
         </div>
-        <button className="btn-gold" onClick={openNew}>+ Nouvelle charge</button>
+        <div style={{display:"flex",gap:8}}>
+          <button className="btn-gold" onClick={openNew}>+ Nouvelle charge</button>
+          <button className="btn-outline" onClick={printSuiviCharges} style={{fontSize:12}}>🖨 Suivi</button>
+        </div>
       </div>
 
       {/* Filtres */}
@@ -537,6 +593,10 @@ function ChargesView({sb,LOGO}){
                 <div className="form-group">
                   <label>Montant TTC</label>
                   <input type="number" value={form.montant_ttc||""} onChange={e=>setForm(f=>({...f,montant_ttc:e.target.value}))} placeholder="0.000" style={{fontWeight:700}}/>
+                </div>
+                <div className="form-group">
+                  <label>🏛 Droit de timbre</label>
+                  <input type="number" min="0" step="0.001" value={form.timbre||""} onChange={e=>setForm(f=>({...f,timbre:e.target.value}))} placeholder="0.000 (optionnel)"/>
                 </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
