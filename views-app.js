@@ -635,9 +635,18 @@ function App({user,onLogout}){
                           <span style={{fontFamily:'"Jost",sans-serif',fontSize:11,fontWeight:600,color:"#c9952a"}}>{tot} pers.</span>
                         </div>
                       );})}
-                      {resPDJ.length>4&&<p style={{fontFamily:'"Jost",sans-serif',fontSize:10,color:"#b0a070",marginTop:4}}>+{resPDJ.length-4} autres chambres</p>}
+                      {resPDJ.length>4&&(
+                        <button onClick={()=>setShowPetitDej(true)} style={{fontFamily:'"Jost",sans-serif',fontSize:10,color:"#c9952a",marginTop:4,background:"none",border:"none",cursor:"pointer",padding:0,textDecoration:"underline"}}>
+                          +{resPDJ.length-4} autres chambres — voir tout
+                        </button>
+                      )}
                       {resPDJ.length===0&&<p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#b0a070",marginTop:4}}>Aucun petit-déjeuner demain</p>}
                     </div>
+                    {resPDJ.length>0&&resPDJ.length<=4&&(
+                      <button onClick={()=>setShowPetitDej(true)} style={{fontFamily:'"Jost",sans-serif',fontSize:10,color:"#c9952a",marginTop:6,background:"none",border:"none",cursor:"pointer",padding:0,textDecoration:"underline"}}>
+                        Voir le détail complet →
+                      </button>
+                    )}
                   </div>
                 );
               })()}
@@ -3193,12 +3202,15 @@ function App({user,onLogout}){
             <button onClick={()=>setShowPetitDej(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#8a7040"}}>✕</button>
           </div>
           {(()=>{
+            const now2=new Date();
+            const h2=now2.getHours();
+            const isPDJ2=h2>=6&&h2<11;
             const presentsAujourd = reservations.filter(r=>
-              ["confirmed","checkedin"].includes(r.status)&&
-              r.checkin<=TODAY&&r.checkout>TODAY
+              ["confirmed","checkedin","checkedout"].includes(r.status)&&
+              (isPDJ2 ? r.checkin<TODAY&&r.checkout>=TODAY : r.checkin<=TODAY&&r.checkout>TODAY)
             );
-            const avecPetitDej = presentsAujourd.filter(r=>r.breakfast!=="non");
-            const sansPetitDej = presentsAujourd.filter(r=>r.breakfast==="non");
+            const avecPetitDej = presentsAujourd;
+            const sansPetitDej = [];
             return(
               <>
                 {avecPetitDej.length===0&&(
