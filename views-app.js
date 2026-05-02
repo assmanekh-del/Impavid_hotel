@@ -420,18 +420,20 @@ function App({user,onLogout}){
       .modal{display:none!important}
       .print-a4{display:none!important}
       /* Zone impression globale (facture/devis/bons) */
-      #print-zone{display:block!important;background:#fff!important;position:absolute;top:0;left:0;width:210mm;min-height:297mm;z-index:9999}
+      #print-zone{display:block!important;background:#fff!important;position:absolute;top:0;left:0;width:210mm;min-height:auto;z-index:9999}
       #print-zone *{background-color:transparent}
-      #print-zone .print-a4{display:block!important;background:#fff!important;width:210mm;min-height:297mm;padding:12mm 14mm;box-sizing:border-box;font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000;margin:0}
+      #print-zone .print-a4{display:block!important;background:#fff!important;width:210mm;min-height:auto;padding:12mm 14mm;box-sizing:border-box;font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000;margin:0}
       /* Zone impression dans modaux (facture réservation, facture libre, devis) */
       .print-only{display:none!important}
-      .print-only.print-a4{display:block!important;background:#fff!important;position:static;top:auto;left:auto;width:210mm;min-height:297mm;padding:12mm 14mm;box-sizing:border-box;font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000;margin:0;z-index:9999}
+      .print-only.print-a4{display:block!important;background:#fff!important;position:static;top:auto;left:auto;width:210mm;min-height:auto;padding:12mm 14mm;box-sizing:border-box;font-family:"Inter",Arial,sans-serif;font-size:10pt;color:#000;margin:0;z-index:9999}
       /* Eviter coupure sur éléments clés */
       table{page-break-inside:auto}
       tr{page-break-inside:avoid;page-break-after:auto}
       thead{display:table-header-group}
       tfoot{display:table-footer-group}
       @page{size:A4 portrait;margin:10mm 14mm}
+      body{background:#fff!important}
+      html,body{background:#fff!important}
     }
     .print-only{display:none}
     .print-a4{display:none}
