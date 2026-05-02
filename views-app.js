@@ -432,9 +432,7 @@ function App({user,onLogout}){
       thead{display:table-header-group}
       tfoot{display:table-footer-group}
       @page{size:A4 portrait;margin:10mm 14mm}
-      body{background:#fff!important}
-      #print-zone,#print-zone *{background-color:transparent}
-      #print-zone .print-a4{background:#fff!important}
+      body{background-color:#fff!important}
     }
     .print-only{display:none}
     .print-a4{display:none}
