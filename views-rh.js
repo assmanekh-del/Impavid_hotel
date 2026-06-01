@@ -146,7 +146,7 @@ function RHView({sb, showToast}) {
 
       {/* ── EMPLOYÉS ── */}
       {!loading && tab==="employes" && (
-        <EmployesTab sb={sb} employes={employes} setEmployes={setEmployes} showToast={showToast} G2={G2}/>
+        <EmployesTab sb={sb} employes={employes} setEmployes={setEmployes} showToast={showToast} G2={G2} conges={conges}/>
       )}
 
       {/* ── CONGÉS ── */}
@@ -166,12 +166,28 @@ function RHView({sb, showToast}) {
 // ══════════════════════════════════════════════════════
 //  ONGLET EMPLOYÉS
 // ══════════════════════════════════════════════════════
-function EmployesTab({sb, employes, setEmployes, showToast, G2}) {
+function EmployesTab({sb, employes, setEmployes, showToast, G2, conges}) {
   const {useState} = React;
   const empty = {nom:"", poste:"", date_embauche:"", salaire_base:"", telephone:"", cin:"", actif:true};
   const [form, setForm] = useState(empty);
   const [modal, setModal] = useState(null);
   const [search, setSearch] = useState("");
+  const [showSalaires, setShowSalaires] = useState(false);
+
+  // Calcul congés par employé (depuis date embauche)
+  function congesEmploye(emp) {
+    if(!emp.date_embauche) return 0;
+    const depuis = emp.date_embauche;
+    const empConges = (conges||[]).filter(c=>
+      c.employe_id===emp.id &&
+      c.statut==="approuve" &&
+      c.date_debut>=depuis
+    );
+    return empConges.reduce((a,c)=>{
+      const jours = Math.max(1, Math.round((new Date(c.date_fin)-new Date(c.date_debut))/86400000)+1);
+      return a+jours;
+    },0);
+  }
 
   const filtered = employes.filter(e=>
     e.nom.toLowerCase().includes(search.toLowerCase()) ||
@@ -217,19 +233,28 @@ function EmployesTab({sb, employes, setEmployes, showToast, G2}) {
         <input value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="🔍 Rechercher un employé..."
           style={{fontSize:13, padding:"8px 12px", width:280}}/>
-        <button className="btn-gold" onClick={()=>{setForm(empty);setModal("new");}}>+ Ajouter un employé</button>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setShowSalaires(s=>!s)}
+            style={{fontFamily:'"Jost",sans-serif',fontSize:12,padding:"7px 14px",borderRadius:8,cursor:"pointer",
+              background:showSalaires?"#fef9f0":"#f5f0e8",
+              border:`1px solid ${showSalaires?"#c9952a":"#e0d0b0"}`,
+              color:showSalaires?"#c9952a":"#8a7040",fontWeight:600}}>
+            {showSalaires?"🙈 Masquer salaires":"👁 Voir salaires"}
+          </button>
+          <button className="btn-gold" onClick={()=>{setForm(empty);setModal("new");}}>+ Ajouter un employé</button>
+        </div>
       </div>
 
       {/* Tableau */}
       <div style={{background:"#fff", border:"1px solid #e8ddc8", borderRadius:10, overflow:"hidden"}}>
-        <div style={{display:"grid", gridTemplateColumns:"1fr 120px 100px 100px 100px 90px", gap:8, padding:"10px 16px", background:"#fef9f0", borderBottom:"1px solid #f0e8d8"}}>
-          {["Nom & Prénom","Poste","CIN","Téléphone","Salaire Base","Statut"].map(h=>(
+        <div style={{display:"grid", gridTemplateColumns:"1fr 120px 100px 100px 90px 100px 120px", gap:8, padding:"10px 16px", background:"#fef9f0", borderBottom:"1px solid #f0e8d8"}}>
+          {["Nom & Prénom","Poste","CIN","Téléphone","Congés pris","Salaire Base","Statut"].map(h=>(
             <p key={h} style={{fontFamily:'"Jost",sans-serif', fontSize:9, letterSpacing:1.5, color:"#8a7040", textTransform:"uppercase", fontWeight:600}}>{h}</p>
           ))}
         </div>
         {filtered.length===0 && <p style={{padding:30, textAlign:"center", color:"#b0a070", fontFamily:'"Jost",sans-serif', fontSize:13}}>Aucun employé</p>}
         {filtered.map(emp=>(
-          <div key={emp.id} style={{display:"grid", gridTemplateColumns:"1fr 120px 100px 100px 100px 90px", gap:8, padding:"12px 16px", borderBottom:"1px solid #f5efe5", alignItems:"center", opacity:emp.actif?1:0.5}}>
+          <div key={emp.id} style={{display:"grid", gridTemplateColumns:"1fr 120px 100px 100px 90px 100px 120px", gap:8, padding:"12px 16px", borderBottom:"1px solid #f5efe5", alignItems:"center", opacity:emp.actif?1:0.5}}>
             <div>
               <p style={{fontSize:14, fontWeight:500}}>{emp.nom}</p>
               {emp.date_embauche && <p style={{fontFamily:'"Jost",sans-serif', fontSize:10, color:"#8a7040"}}>Depuis {new Date(emp.date_embauche+"T12:00:00").toLocaleDateString("fr-FR")}</p>}
@@ -237,7 +262,13 @@ function EmployesTab({sb, employes, setEmployes, showToast, G2}) {
             <p style={{fontFamily:'"Jost",sans-serif', fontSize:12, color:"#6a5530"}}>{emp.poste||"—"}</p>
             <p style={{fontFamily:'"Jost",sans-serif', fontSize:11, color:"#8a7040"}}>{emp.cin||"—"}</p>
             <p style={{fontFamily:'"Jost",sans-serif', fontSize:11, color:"#8a7040"}}>{emp.telephone||"—"}</p>
-            <p style={{fontFamily:'"Jost",sans-serif', fontSize:12, fontWeight:600, color:G2}}>{(emp.salaire_base||0).toFixed(3)} TND</p>
+            <div style={{textAlign:"center"}}>
+              <p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:700,color:congesEmploye(emp)>20?"#c95050":"#2d7a4f"}}>{congesEmploye(emp)} j</p>
+              <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,color:"#8a7040"}}>depuis embauche</p>
+            </div>
+            <p style={{fontFamily:'"Jost",sans-serif', fontSize:12, fontWeight:600, color:G2}}>
+              {showSalaires?(emp.salaire_base||0).toFixed(3)+" TND":"● ● ● ●"}
+            </p>
             <div style={{display:"flex", gap:6}}>
               <button onClick={()=>{setForm(emp);setModal("edit");}}
                 style={{fontFamily:'"Jost",sans-serif', fontSize:10, padding:"3px 8px", background:"#f5f0e8", border:"1px solid #e0d0b0", borderRadius:4, cursor:"pointer"}}>✏️</button>
