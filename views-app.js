@@ -432,7 +432,8 @@ function App({user,onLogout}){
       tr{page-break-inside:avoid;page-break-after:auto}
       thead{display:table-header-group}
       tfoot{display:table-footer-group}
-      @page{size:A4 portrait;margin:10mm 14mm}
+      @page{size:A4 portrait;margin:0}
+      body{background:#fff!important}
       body{background-color:#fff!important}
     }
     .print-only{display:none}
@@ -475,6 +476,7 @@ function App({user,onLogout}){
             ["archives","📁","Archives"],
             ["groupes","🏢","Groupes"],
             ["clients-societes","📋","Fichier Clients"],
+            ...(userRole==="gerant"?[["rh","👥","RH & Salaires"]]:[]),
             ["police","📋","Livre de Police"],
             ["contrats","🤝","Contrats"],
             ["charges","💸","Charges"],
@@ -538,7 +540,7 @@ function App({user,onLogout}){
                 {label:"Chambres Occupées",value:occupiedRooms.length,total:"/20",color:"#1a4f8a",bg:"#d0e4f8"},
                 {label:"Chambres Libres",value:freeRooms.length,total:"/20",color:"#2d7a4f",bg:"#d4f0e0"},
                 {label:"En Attente",value:reservations.filter(r=>r.status==="pending").length,total:" résa",color:"#b07d1a",bg:"#fef3d0"},
-                {label:"Revenus payés",value:FMT(reservations.filter(r=>r.paid).reduce((a,r)=>a+getEffectivePrice(r),0)),total:"",color:"#c9952a",bg:"#fef3d0"},
+                ...(userRole==="gerant"?[{label:"Revenus payés",value:FMT(reservations.filter(r=>r.paid).reduce((a,r)=>a+getEffectivePrice(r),0)),total:"",color:"#c9952a",bg:"#fef3d0"}]:[]),
               ].map((s,i)=>(
                 <div key={i} className="stat-card" style={{borderTop:"3px solid "+s.color}}>
                   <p style={{fontFamily:'"Jost",sans-serif',fontSize:10,letterSpacing:2,color:"#8a7040",textTransform:"uppercase",marginBottom:8,fontWeight:600}}>{s.label}</p>
@@ -857,6 +859,7 @@ function App({user,onLogout}){
 
           // Pour chaque chambre et chaque jour : trouver si occupée
           function getStatus(roomId, dateStr){
+            if(userRole!=="gerant"&&dateStr<TODAY) return null;
             const resDepart=reservations.find(r=>
               r.roomId===roomId&&
               ["confirmed","checkedin"].includes(r.status)&&
@@ -1193,7 +1196,7 @@ function App({user,onLogout}){
                       </div>
                     ))}
                   </div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+                  {userRole==="gerant"&&<div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
                     {[
                       {k:"CA Total",v:bilan.revenus.toFixed(3),icon:"💰",c:"#2a1e08"},
                       {k:"Encaissé",v:bilan.encaisse.toFixed(3),icon:"✅",c:"#2d7a4f"},
@@ -1205,8 +1208,8 @@ function App({user,onLogout}){
                         <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,color:"#8a7040",marginTop:2}}>TND</p>
                       </div>
                     ))}
-                  </div>
-                  {bilan.revenus>0&&(
+                  </div>}
+                  {bilan.revenus>0&&userRole==="gerant"&&(
                     <div style={{marginTop:10,background:"rgba(255,255,255,0.5)",borderRadius:6,padding:"7px 12px"}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                         <span style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:color,fontWeight:600}}>
@@ -1260,7 +1263,7 @@ function App({user,onLogout}){
                         <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#c95050",fontWeight:600}}>✕ Annulée</p>
                       ):(
                         <>
-                          <p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:600,color:r.paid?"#2d7a4f":"#2a1e08"}}>{FMT(getEffectivePrice(r))}</p>
+                          {userRole==="gerant"&&<p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:600,color:r.paid?"#2d7a4f":"#2a1e08"}}>{FMT(getEffectivePrice(r))}</p>}
                           <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:r.paid?"#2d7a4f":"#c95050"}}>{r.paid?"✓ payé":"en attente"}</p>
                         </>
                       )}
@@ -1284,11 +1287,11 @@ function App({user,onLogout}){
           // Grouper par mois/année pour le sélecteur
           const moisDispos=[...new Set(terminees.map(r=>r.checkout.slice(0,7)))].sort((a,b)=>b.localeCompare(a));
 
-          return <HistoriqueView terminees={terminees} moisDispos={moisDispos} G2={G2} openDetail={openDetail}/>;
+          return <HistoriqueView terminees={terminees} moisDispos={moisDispos} G2={G2} openDetail={openDetail} userRole={userRole}/>;
         })()}
 
         {/* ── ARCHIVES FACTURES ── */}
-        {view==="archives"&&<ArchivesView sb={sb} openDetail={openDetail} ROOMS={ROOMS} LOGO={LOGO} G2="#8B6434" doPrint={doPrint} setModal={setModal} restoreFacture={restoreFacture} showToast={showToast} REFS={REFS}/>}
+        {view==="archives"&&<ArchivesView sb={sb} openDetail={openDetail} ROOMS={ROOMS} LOGO={LOGO} G2="#8B6434" doPrint={doPrint} setModal={setModal} restoreFacture={restoreFacture} showToast={showToast} REFS={REFS} userRole={userRole}/>}
         {/* ══ MODAL MODE DE PAIEMENT ══ */}
         {paiementModal&&(()=>{
           const r=paiementModal.data;
@@ -1373,6 +1376,7 @@ function App({user,onLogout}){
         )}
 
         {view==="clients-societes"&&<FichierClientsView sb={sb} showToast={showToast}/>}
+        {view==="rh"&&<RHView sb={sb} showToast={showToast}/>}
         {view==="groupes"&&<GroupesView sb={sb} ROOMS={ROOMS} reservations={reservations} setReservations={setReservations} showToast={showToast} doPrint={doPrint} montantEnLettres={montantEnLettres} SignatureBlock={SignatureBlock} LOGO={LOGO} saveFacture={saveFacture} nextInvNum={nextInvNum} userEmail={user?.email}/>}
         {view==="police"&&<LivreDePolice reservations={reservations} ROOMS={ROOMS} LOGO={LOGO}/>}
         {view==="contrats"&&<ContratsView sb={sb}/>}
