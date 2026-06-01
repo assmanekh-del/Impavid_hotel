@@ -483,7 +483,7 @@ function App({user,onLogout}){
             ["menage","🧹","Ménage"],
             ["linge","🧺","Linge"],
             ["resources","👥","Ressources"],
-          ].filter(([v])=>v!=="rh"||(userRole==="gerant")).map(([v,icon,l])=>(
+          ].map(([v,icon,l])=>(
             <button key={v} className={"nav-btn "+(view===v?"active":"")} onClick={()=>setView(v)}>
               <span style={{fontSize:15,flexShrink:0}}>{icon}</span>
               <span>{l}</span>
