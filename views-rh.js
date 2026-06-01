@@ -174,18 +174,17 @@ function EmployesTab({sb, employes, setEmployes, showToast, G2, conges}) {
   const [search, setSearch] = useState("");
   const [showSalaires, setShowSalaires] = useState(false);
 
-  // Calcul congés par employé (depuis date embauche)
-  function congesEmploye(emp) {
+  // Calcul congés par employé par type (depuis date embauche)
+  function congesEmploye(emp, type) {
     if(!emp.date_embauche) return 0;
-    const depuis = emp.date_embauche;
     const empConges = (conges||[]).filter(c=>
       c.employe_id===emp.id &&
       c.statut==="approuve" &&
-      c.date_debut>=depuis
+      c.date_debut>=emp.date_embauche &&
+      (!type||c.type===type)
     );
     return empConges.reduce((a,c)=>{
-      const jours = Math.max(1, Math.round((new Date(c.date_fin)-new Date(c.date_debut))/86400000)+1);
-      return a+jours;
+      return a + Math.max(1, Math.round((new Date(c.date_fin)-new Date(c.date_debut))/86400000)+1);
     },0);
   }
 
@@ -234,12 +233,15 @@ function EmployesTab({sb, employes, setEmployes, showToast, G2, conges}) {
           placeholder="🔍 Rechercher un employé..."
           style={{fontSize:13, padding:"8px 12px", width:280}}/>
         <div style={{display:"flex",gap:8}}>
-          <button onClick={()=>setShowSalaires(s=>!s)}
+          <button onClick={()=>{
+              if(showSalaires){setShowSalaires(false);}
+              else{const pwd=prompt("Mot de passe pour afficher les salaires :");if(pwd==="2026")setShowSalaires(true);else if(pwd!==null)alert("Mot de passe incorrect");}
+            }}
             style={{fontFamily:'"Jost",sans-serif',fontSize:12,padding:"7px 14px",borderRadius:8,cursor:"pointer",
               background:showSalaires?"#fef9f0":"#f5f0e8",
               border:`1px solid ${showSalaires?"#c9952a":"#e0d0b0"}`,
               color:showSalaires?"#c9952a":"#8a7040",fontWeight:600}}>
-            {showSalaires?"🙈 Masquer salaires":"👁 Voir salaires"}
+            {showSalaires?"🙈 Masquer salaires":"🔒 Voir salaires"}
           </button>
           <button className="btn-gold" onClick={()=>{setForm(empty);setModal("new");}}>+ Ajouter un employé</button>
         </div>
@@ -262,9 +264,13 @@ function EmployesTab({sb, employes, setEmployes, showToast, G2, conges}) {
             <p style={{fontFamily:'"Jost",sans-serif', fontSize:12, color:"#6a5530"}}>{emp.poste||"—"}</p>
             <p style={{fontFamily:'"Jost",sans-serif', fontSize:11, color:"#8a7040"}}>{emp.cin||"—"}</p>
             <p style={{fontFamily:'"Jost",sans-serif', fontSize:11, color:"#8a7040"}}>{emp.telephone||"—"}</p>
-            <div style={{textAlign:"center"}}>
-              <p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:700,color:congesEmploye(emp)>20?"#c95050":"#2d7a4f"}}>{congesEmploye(emp)} j</p>
-              <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,color:"#8a7040"}}>depuis embauche</p>
+            <div style={{display:"flex",flexDirection:"column",gap:2}}>
+              {[["paye","CP","#2d7a4f"],["maladie","Mal.","#c95050"],["absence","Abs.","#c9952a"]].map(([type,label,color])=>(
+                <div key={type} style={{display:"flex",justifyContent:"space-between",gap:4,alignItems:"center"}}>
+                  <span style={{fontFamily:'"Jost",sans-serif',fontSize:8,color:"#8a7040"}}>{label}</span>
+                  <span style={{fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color}}>{congesEmploye(emp,type)}j</span>
+                </div>
+              ))}
             </div>
             <p style={{fontFamily:'"Jost",sans-serif', fontSize:12, fontWeight:600, color:G2}}>
               {showSalaires?(emp.salaire_base||0).toFixed(3)+" TND":"● ● ● ●"}
