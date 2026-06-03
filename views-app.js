@@ -859,7 +859,8 @@ function App({user,onLogout}){
 
           // Pour chaque chambre et chaque jour : trouver si occupée
           function getStatus(roomId, dateStr){
-            if(userRole!=="gerant"&&dateStr<TODAY) return null;
+            const firstDayOfMonth=TODAY.slice(0,7)+"-01";
+            if(userRole!=="gerant"&&dateStr<firstDayOfMonth) return null;
             const resDepart=reservations.find(r=>
               r.roomId===roomId&&
               ["confirmed","checkedin"].includes(r.status)&&
