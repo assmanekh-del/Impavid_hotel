@@ -1834,9 +1834,10 @@ function App({user,onLogout}){
                       <option>Belge</option>
                       <option>Suisse</option>
                       <option>Américaine</option>
+                      <option>Australienne</option>
                       <option value=" autre">✏️ Autre...</option>
                     </select>
-                    {!["","Tunisienne","Algérienne","Marocaine","Libyenne","Française","Italienne","Allemande","Espagnole","Britannique","Belge","Suisse","Américaine"].includes(form.nationality||"")&&(
+                    {!["","Tunisienne","Algérienne","Marocaine","Libyenne","Française","Italienne","Allemande","Espagnole","Britannique","Belge","Suisse","Américaine","Australienne"].includes(form.nationality||"")&&(
                       <input value={form.nationality||""} onChange={e=>setForm(f=>({...f,nationality:e.target.value}))} placeholder="Saisir la nationalité..." style={{marginTop:6,fontSize:12,padding:"6px 10px",width:"100%"}}/>
                     )}
                   </div>
@@ -1965,9 +1966,10 @@ function App({user,onLogout}){
                               <option>Belge</option>
                               <option>Suisse</option>
                               <option>Américaine</option>
+                              <option>Australienne</option>
                               <option value=" autre">✏️ Autre...</option>
                             </select>
-                            {!["Tunisienne","Algérienne","Marocaine","Libyenne","Française","Italienne","Allemande","Espagnole","Britannique","Belge","Suisse","Américaine"].includes(acc.nationalite||"")&&acc.nationalite&&(
+                            {!["Tunisienne","Algérienne","Marocaine","Libyenne","Française","Italienne","Allemande","Espagnole","Britannique","Belge","Suisse","Américaine","Australienne"].includes(acc.nationalite||"")&&acc.nationalite&&(
                               <input value={acc.nationalite||""} onChange={e=>{
                                 const a=[...(form.accompagnants||[])];
                                 a[idx]={...a[idx],nationalite:e.target.value};
