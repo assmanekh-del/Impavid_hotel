@@ -1,9 +1,11 @@
-function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal,restoreFacture,showToast,REFS}){
+function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal,restoreFacture,showToast,REFS,userRole}){
+  const isGerant = !["receptionniste","Receptionniste"].includes(userRole);
+  const AMTG = (n,s=" TND") => isGerant ? Number(n||0).toFixed(3)+s : "—";
   const [factures,setFactures]=React.useState([]);
   const [loading,setLoading]=React.useState(true);
   const [search,setSearch]=React.useState("");
   const [filterType,setFilterType]=React.useState("all");
-  const [filterMois,setFilterMois]=React.useState("");
+  const [filterMois,setFilterMois]=React.useState(userRole!=="gerant"?String(new Date().getMonth()+1).padStart(2,'0'):"");
   const [filterAnnee,setFilterAnnee]=React.useState("");
   const [filterMode,setFilterMode]=React.useState("all");
   const [modalFact,setModalFact]=React.useState(null);
@@ -104,7 +106,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal,restoreFactu
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:20}}>
         {[
           {label:"Documents",val:liste.length,color:"#c9952a",bg:"#fef9f0",border:"#e8d8b0"},
-          {label:"Total TTC",val:totalTTC.toFixed(3)+" TND",color:"#2a8a5a",bg:"#f0faf4",border:"#a0d8b8"},
+          {label:"Total TTC",val:isGerant?totalTTC.toFixed(3)+" TND":"—",color:"#2a8a5a",bg:"#f0faf4",border:"#a0d8b8"},
           {label:"Factures libres",val:liste.filter(f=>f.type==="libre").length,color:"#5a7fc8",bg:"#f0f4ff",border:"#c0cfee"},
         ].map(({label,val,color,bg,border})=>(
           <div key={label} style={{background:bg,border:"1.5px solid "+border,borderRadius:10,padding:"14px 18px"}}>
@@ -120,7 +122,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal,restoreFactu
       ):(
         <div style={{background:"#fff",border:"1px solid #e8ddc8",borderRadius:10,overflow:"hidden",boxShadow:"0 2px 8px rgba(42,30,8,0.06)"}}>
           <div style={{padding:"11px 18px",borderBottom:"1px solid #f0e8d8",display:"grid",gridTemplateColumns:"120px 110px 1fr 120px 100px 130px 160px",gap:8,background:"#fef9f0"}}>
-            {["N° Facture","Date","Client","Type","Paiement","Montant TTC","Actions"].map(h=>(
+            {["N° Facture","Date","Client","Type","Paiement",...(userRole==="gerant"?["Montant TTC"]:[]),"Actions"].map(h=>(
               <p key={h} style={{fontFamily:'"Jost",sans-serif',fontSize:9,letterSpacing:1.5,color:"#8a7040",textTransform:"uppercase",fontWeight:600}}>{h}</p>
             ))}
           </div>
@@ -154,7 +156,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal,restoreFactu
                   <option value="virement">🏦 Virement</option>
                 </select>
               </div>
-              <p style={{fontFamily:'"Jost",sans-serif',fontSize:14,fontWeight:700,color:"#2a1e08",textAlign:"right"}}>{(f.montant_ttc||0).toFixed(3)}<span style={{fontSize:9,color:"#8a7040",marginLeft:2}}>TND</span></p>
+              {userRole==="gerant"&&<p style={{fontFamily:'"Jost",sans-serif',fontSize:14,fontWeight:700,color:"#2a1e08",textAlign:"right"}}>{(f.montant_ttc||0).toFixed(3)}<span style={{fontSize:9,color:"#8a7040",marginLeft:2}}>TND</span></p>}
               <div style={{display:"flex",gap:6,alignItems:"center"}}>
                 {f.annulee?(
                   <div style={{display:"flex",gap:6,flex:1}}>
@@ -262,7 +264,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal,restoreFactu
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,paddingBottom:14,borderBottom:"1px solid #f0e8d8"}}>
                 <div>
                   <p style={{fontFamily:'"Cormorant Garamond",serif',fontSize:20,fontWeight:700,color:"#3a5fc8"}}>📊 Suivi des Factures</p>
-                  <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040",marginTop:2}}>{listeSuivi.length} facture{listeSuivi.length>1?"s":""} · Total TTC : {totalTTC.toFixed(3)} TND</p>
+                  <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040",marginTop:2}}>{listeSuivi.length} facture{listeSuivi.length>1?"s":""}{isGerant?" · Total TTC : "+totalTTC.toFixed(3)+" TND":""}</p>
                 </div>
                 <div style={{display:"flex",gap:8}}>
                   <button className="btn-ghost" onClick={()=>setShowSuivi(false)}>Fermer</button>
@@ -282,7 +284,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal,restoreFactu
               </div>
               {/* Résumé */}
               <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
-                {[["Total HT",totalHT.toFixed(3),"#5a7fc8","#f0f4ff"],["TVA (7%)",totalTVA.toFixed(3),"#8a7040","#faf8f5"],["Total TTC",totalTTC.toFixed(3),"#2a8a5a","#f0faf4"]].map(([l,v,c,bg])=>(
+                {[["Total HT",isGerant?totalHT.toFixed(3):"—","#5a7fc8","#f0f4ff"],["TVA (7%)",isGerant?totalTVA.toFixed(3):"—","#8a7040","#faf8f5"],["Total TTC",isGerant?totalTTC.toFixed(3):"—","#2a8a5a","#f0faf4"]].map(([l,v,c,bg])=>(
                   <div key={l} style={{background:bg,borderRadius:8,padding:"10px 14px",border:"1px solid #e0d8cc"}}>
                     <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color:c,textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>{l}</p>
                     <p style={{fontFamily:'"Cormorant Garamond",serif',fontSize:18,fontWeight:700,color:"#2a1e08"}}>{v} <span style={{fontSize:11,color:"#8a7040"}}>TND</span></p>
@@ -335,9 +337,9 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal,restoreFactu
                     <tfoot>
                       <tr style={{background:"#8B6434"}}>
                         <td colSpan={3} style={{padding:"8px",fontWeight:700,color:"#fff",fontSize:11}}>TOTAL — {listeSuivi.length} facture{listeSuivi.length>1?"s":""}</td>
-                        <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:"#fff"}}>{totalHT.toFixed(3)}</td>
-                        <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:"#fff"}}>{totalTVA.toFixed(3)}</td>
-                        <td style={{padding:"8px",textAlign:"right",fontWeight:800,fontSize:13,color:"#fff"}}>{totalTTC.toFixed(3)}</td>
+                        <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:"#fff"}}>{isGerant?totalHT.toFixed(3):"—"}</td>
+                        <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:"#fff"}}>{isGerant?totalTVA.toFixed(3):"—"}</td>
+                        <td style={{padding:"8px",textAlign:"right",fontWeight:800,fontSize:13,color:"#fff"}}>{isGerant?totalTTC.toFixed(3):"—"}</td>
                         <td colSpan={2}></td>
                       </tr>
                     </tfoot>
@@ -514,7 +516,7 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal,restoreFactu
                     {/* Aperçu total */}
                     <div style={{display:"flex",justifyContent:"flex-end"}}>
                       <div style={{fontFamily:'"Jost",sans-serif',fontSize:12,minWidth:240,background:"#faf8f5",borderRadius:8,padding:"10px 14px",border:"1px solid #e0d8cc"}}>
-                        {[["Total HT",grandHT.toFixed(3)+" TND"],["TVA 7%",tvaAmt.toFixed(3)+" TND"]].map(([l,v])=>(
+                        {[["Total HT",isGerant?grandHT.toFixed(3)+" TND":"—"],["TVA 7%",isGerant?tvaAmt.toFixed(3)+" TND":"—"]].map(([l,v])=>(
                           <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:4,color:"#6a5a45"}}><span>{l}</span><span style={{fontWeight:500}}>{v}</span></div>
                         ))}
                         {(parseFloat(ed.remise)||0)>0&&<div style={{display:"flex",justifyContent:"space-between",marginBottom:4,color:"#c95050"}}><span>Remise ({ed.remise}%)</span><span style={{fontWeight:600}}>− {remiseMont.toFixed(3)} TND</span></div>}
@@ -609,8 +611,92 @@ function ArchivesView({sb,openDetail,ROOMS,LOGO,G2,doPrint,setModal,restoreFactu
   );
 }
 
-function HistoriqueView({terminees,moisDispos,G2,openDetail}){
-  const [moisSel,setMoisSel]=React.useState(moisDispos[0]||"");
+
+function printEtatHistorique(liste, moisLabel){
+  const fmt = v => Number(v||0).toFixed(3);
+  const fmtD = d => new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"});
+  const modeLabel = {especes:"Espèces",carte:"Carte",cheque:"Chèque",virement:"Virement"};
+  let totalNuits=0, totalMontant=0, totalPaye=0, totalReste=0;
+
+  const rows = liste.map(r => {
+    const n = nights(r.checkin, r.checkout);
+    const total = getEffectivePrice(r);
+    const avance = Number(r.avance||0);
+    const paye = r.paid ? total : avance;
+    const reste = Math.max(0, total - paye);
+    totalNuits += n;
+    totalMontant += total;
+    totalPaye += paye;
+    totalReste += reste;
+    const numRes = String(r.numero||"").padStart(6,"0");
+    const nbP = (r.adults||1)+(r.children||0);
+    const statut = r.paid ? "✅ Payé" : avance>0 ? "⟳ Avance" : "⏳ Impayé";
+    return `<tr style="border-bottom:1px solid #f0e8d8;font-size:9px;">
+      <td style="padding:5px 6px;">${r.guest}</td>
+      <td style="padding:5px 6px;text-align:center;">${numRes}</td>
+      <td style="padding:5px 6px;text-align:center;">${fmtD(r.checkin)}</td>
+      <td style="padding:5px 6px;text-align:center;">${fmtD(r.checkout)}</td>
+      <td style="padding:5px 6px;text-align:center;">${n}</td>
+      <td style="padding:5px 6px;text-align:center;">${nbP}</td>
+      <td style="padding:5px 6px;text-align:right;">${fmt(total)}</td>
+      <td style="padding:5px 6px;text-align:right;color:#2d7a4f;">${fmt(paye)}</td>
+      <td style="padding:5px 6px;text-align:right;color:${reste>0?"#c95050":"#2d7a4f"};">${fmt(reste)}</td>
+      <td style="padding:5px 6px;">${modeLabel[r.modePaiement||"especes"]||"—"}</td>
+      <td style="padding:5px 6px;color:#8a7040;">${r.notes||""}</td>
+    </tr>`;
+  }).join("");
+
+  const today = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
+  const html = `<div style="font-family:Arial,sans-serif;padding:10mm 8mm;width:297mm;min-height:210mm;box-sizing:border-box;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #b5872a;padding-bottom:10px;">
+    <div>
+      <p style="font-size:18px;font-weight:900;letter-spacing:4px;color:#1a1208;margin:0;">IMPAVID HOTEL</p>
+      <p style="font-size:10px;color:#8a7040;margin:2px 0;">Rue Jamel Abdelnacer, Gabès · 75220856</p>
+    </div>
+    <div style="text-align:right;">
+      <p style="font-size:14px;font-weight:700;color:#b5872a;margin:0;">ÉTAT DES RÉSERVATIONS</p>
+      <p style="font-size:11px;color:#8a7040;margin:2px 0;">Période : ${moisLabel}</p>
+      <p style="font-size:10px;color:#8a7040;margin:0;">Imprimé le ${today} · ${liste.length} séjour${liste.length>1?"s":""}</p>
+    </div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;">
+    <thead>
+      <tr style="background:#b5872a;color:#fff;">
+        ${["Client","N° Rés.","Arrivée","Départ","Nuits","Pers.","Total TTC","Payé/Av.","Reste","Paiement","Observations"].map(h=>`<th style="padding:6px 5px;text-align:left;font-size:8px;letter-spacing:0.5px;white-space:nowrap;">${h}</th>`).join("")}
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+    <tfoot>
+      <tr style="background:#f5ede0;font-weight:700;border-top:2px solid #b5872a;">
+        <td colspan="4" style="padding:7px 6px;font-size:10px;font-weight:700;">TOTAUX</td>
+        <td style="padding:7px 6px;font-size:10px;text-align:center;">${totalNuits}</td>
+        <td></td>
+        <td style="padding:7px 6px;font-size:11px;text-align:right;color:#1a1208;">${fmt(totalMontant)}</td>
+        <td style="padding:7px 6px;font-size:11px;text-align:right;color:#2d7a4f;">${fmt(totalPaye)}</td>
+        <td style="padding:7px 6px;font-size:11px;text-align:right;color:#c95050;">${fmt(totalReste)}</td>
+        <td colspan="2"></td>
+      </tr>
+    </tfoot>
+  </table>
+  <p style="text-align:center;font-size:8px;color:#8a7040;margin-top:14px;border-top:1px solid #e8d8b0;padding-top:8px;">
+    IMPAVID HOTEL · Rue Jamel Abdelnacer, Gabès · Tél: 75220856 · impavidhotel@gmail.com
+  </p>
+</div>`;
+
+  const w = window.open("","_blank","width=1100,height=800");
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>
+    @page{size:A4 landscape;margin:0}
+    body{margin:0;padding:0}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>${html}<script>window.onload=()=>{window.print();}<\/script></body></html>`);
+  w.document.close();
+}
+
+function HistoriqueView({terminees,moisDispos,G2,openDetail,userRole}){
+  const isGerant = !["receptionniste","Receptionniste"].includes(userRole);
+  const AMTG = (n,s=" TND") => isGerant ? Number(n||0).toFixed(3)+s : "—";
+  const currentMois=new Date().toISOString().slice(0,7);
+  const [moisSel,setMoisSel]=React.useState(userRole!=="gerant"?(moisDispos.includes(currentMois)?currentMois:moisDispos[0]||""):moisDispos[0]||"");
   const [searchH,setSearchH]=React.useState("");
   const [printMode,setPrintMode]=React.useState(false);
 
@@ -637,9 +723,14 @@ function HistoriqueView({terminees,moisDispos,G2,openDetail}){
           <p className="section-title">Historique</p>
           <p className="section-sub">{liste.length} séjour{liste.length>1?"s":""} terminé{liste.length>1?"s":""}{moisSel?" — "+moisLabel:""}</p>
         </div>
-        <button className="btn-gold" onClick={()=>{setPrintMode(true);setTimeout(()=>window.print(),100);}}>
-          🖨 Imprimer le bilan
-        </button>
+        <div style={{display:"flex",gap:8}}>
+          <button className="btn-outline" style={{fontSize:12}} onClick={()=>printEtatHistorique(liste,moisLabel)}>
+            📋 État PDF
+          </button>
+          <button className="btn-gold" onClick={()=>{setPrintMode(true);setTimeout(()=>window.print(),100)}}>
+            🖨 Imprimer le bilan
+          </button>
+        </div>
       </div>
 
       {/* ── FILTRES ── */}
@@ -664,9 +755,11 @@ function HistoriqueView({terminees,moisDispos,G2,openDetail}){
         {[
           {label:"Séjours",val:liste.length,unit:"",color:"#c9952a",bg:"#fef9f0",border:"#e8d8b0"},
           {label:"Nuits totales",val:totalNuits,unit:"",color:"#5a7fc8",bg:"#f0f4ff",border:"#c0cfee"},
-          {label:"Revenus TTC",val:totalRev.toFixed(3),unit:"TND",color:"#2a8a5a",bg:"#f0faf4",border:"#a0d8b8"},
-          {label:"Encaissé",val:totalEnc.toFixed(3),unit:"TND",color:"#2d7a4f",bg:"#e8f5ee",border:"#90c8a8"},
-          {label:"En attente",val:(Math.round((totalRev-totalEnc)*100)/100).toFixed(3),unit:"TND",color:"#c95050",bg:"#fdf0f0",border:"#e0a0a0"},
+          ...(userRole==="gerant"?[
+            {label:"Revenus TTC",val:totalRev.toFixed(3),unit:"TND",color:"#2a8a5a",bg:"#f0faf4",border:"#a0d8b8"},
+            {label:"Encaissé",val:totalEnc.toFixed(3),unit:"TND",color:"#2d7a4f",bg:"#e8f5ee",border:"#90c8a8"},
+            {label:"En attente",val:(Math.round((totalRev-totalEnc)*100)/100).toFixed(3),unit:"TND",color:"#c95050",bg:"#fdf0f0",border:"#e0a0a0"},
+          ]:[]),
         ].map(({label,val,unit,color,bg,border})=>(
           <div key={label} style={{background:bg,border:"1.5px solid "+border,borderRadius:10,padding:"14px 16px"}}>
             <p style={{fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color:color,textTransform:"uppercase",letterSpacing:.8,marginBottom:6}}>{label}</p>
@@ -677,7 +770,7 @@ function HistoriqueView({terminees,moisDispos,G2,openDetail}){
       </div>
 
       {/* ── RÉCAPITULATIF TVA ── */}
-      {liste.length>0&&(
+      {liste.length>0&&userRole==="gerant"&&(
         <div style={{background:"#faf8f5",border:"1px solid #e8ddc8",borderRadius:8,padding:"12px 18px",marginBottom:20,display:"flex",gap:32,flexWrap:"wrap"}}>
           <div><p style={{fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>Total HT</p><p style={{fontFamily:'"Jost",sans-serif',fontSize:15,fontWeight:700,color:"#2a1e08"}}>{totalHT_b.toFixed(3)} TND</p></div>
           <div><p style={{fontFamily:'"Jost",sans-serif',fontSize:9,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>TVA 7%</p><p style={{fontFamily:'"Jost",sans-serif',fontSize:15,fontWeight:700,color:"#2a1e08"}}>{totalTVA.toFixed(3)} TND</p></div>
@@ -724,7 +817,7 @@ function HistoriqueView({terminees,moisDispos,G2,openDetail}){
               <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#6a5530",alignSelf:"center"}}>{new Date(r.checkout).toLocaleDateString("fr-FR")}</p>
               <p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:600,color:"#2a1e08",alignSelf:"center"}}>{n}</p>
               <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#8a7040",alignSelf:"center"}}>{r.pension==="dp"?"DP":"LPD"}</p>
-              <p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:700,color:"#2a1e08",alignSelf:"center",textAlign:"right"}}>{montant.toFixed(3)}<span style={{fontSize:9,color:"#8a7040",marginLeft:2}}>TND</span></p>
+              {userRole==="gerant"&&<p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:700,color:"#2a1e08",alignSelf:"center",textAlign:"right"}}>{montant.toFixed(3)}<span style={{fontSize:9,color:"#8a7040",marginLeft:2}}>TND</span></p>}
               <div style={{alignSelf:"center"}}>
                 <span style={{fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:12,background:r.paid?"#e8f5ee":"#fdf0f0",color:r.paid?"#2d7a4f":"#c95050"}}>
                   {r.paid?"✓ Payé":"En attente"}

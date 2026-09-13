@@ -7,6 +7,8 @@ function App({user,onLogout}){
   const [syncing,setSyncing]=useState(false);
   const [modal,setModal]=useState(null);
   const [userRole,setUserRole]=useState(null);
+  const isGerant = !["receptionniste","Receptionniste"].includes(userRole); // null ou gerant → affiche
+  const AMT = (n,suffix=" TND") => isGerant ? Number(n||0).toFixed(3)+suffix : "—";
   const [paiementModal,setPaiementModal]=useState(null);
   const [showPetitDej,setShowPetitDej]=useState(false);
   const [cancelModal,setCancelModal]=useState(null); // {numero, type, onDone}
@@ -21,6 +23,7 @@ function App({user,onLogout}){
   const [filterDateTo,setFilterDateTo]=useState("");
   const [filterPaid,setFilterPaid]=useState("all");
   const [filterModePaiement,setFilterModePaiement]=useState("all");
+  const [filterSource,setFilterSource]=useState("all");
   const [toast,setToast]=useState(null);
   const [devisRooms,setDevisRooms]=useState([]);
   const [devisInfo,setDevisInfo]=useState({client:"",checkin:"",checkout:"",notes:""});
@@ -63,7 +66,7 @@ function App({user,onLogout}){
   async function saveFacture(payload){
     addLog("🧾 Facture créée",{numero:payload.numero,client:payload.client,montant:payload.montant_ttc});
     // Ajouter mode_paiement si présent dans le form actuel
-    const payloadWithMode={...payload,mode_paiement:payload.mode_paiement||form?.modePaiement||"especes"};
+    const payloadWithMode={...payload,mode_paiement:payload.mode_paiement||form?.modePaiement||"especes",avance:parseFloat(form?.avance||0)||0,source:form?.source||"direct"};
     try{
       const {error}=await sb.from('factures').insert([payloadWithMode]);
       if(error) throw error;
@@ -122,7 +125,179 @@ function App({user,onLogout}){
     setPrintReady(true);
     setTimeout(()=>{document.title=oldTitle;},2000);
   }
-  // Fermeture intelligente — annule le numéro réservé si non sauvegardé
+
+  function printVoucher(r){
+    const room=ROOMS.find(x=>x.id===r.roomId);
+    const n=Math.max(1,Math.round((new Date(r.checkout)-new Date(r.checkin))/86400000));
+    const prixNuit=r.customPrice!==undefined?r.customPrice:(room?.price||0)+(r.pension==="dp"?40:0);
+    const total=Math.round((prixNuit*n+(r.extraBed?30*n:0))*1000)/1000;
+    const avance=Number(r.avance||0);
+    const reste=Math.max(0,Math.round((total-avance)*1000)/1000);
+    const fmt=v=>Number(v).toFixed(3);
+    const fmtDate=d=>new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"long",year:"numeric"});
+    const dateRes=new Date(r.created_at||Date.now()).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"long",year:"numeric"});
+    const numRes=String(r.numero||"").padStart(8,"0");
+    const nbPersonnes=(r.adults||1)+(r.children||0);
+    const avanceSection=avance>0?`
+      <div style="border-top:1px solid #d8c8a8;padding-top:10px;margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="background:#f5fcf8;border:1px solid #a0d8b8;border-radius:8px;padding:8px 12px;">
+          <p style="font-size:7.5px;letter-spacing:1.5px;color:#2d7a4f;text-transform:uppercase;margin:0 0 2px;">Avance versee</p>
+          <p style="font-size:16px;font-weight:800;color:#2d7a4f;margin:0;">${fmt(avance)} DT</p>
+        </div>
+        <div style="background:#fff5f5;border:1px solid #e0a0a0;border-radius:8px;padding:8px 12px;">
+          <p style="font-size:7.5px;letter-spacing:1.5px;color:#c95050;text-transform:uppercase;margin:0 0 2px;">Reste a payer</p>
+          <p style="font-size:16px;font-weight:800;color:#c95050;margin:0;">${fmt(reste)} DT</p>
+        </div>
+      </div>`:"";
+    const rows=[
+      ["M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z","DATE D'ARRIVEE",fmtDate(r.checkin)],
+      ["M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z","DATE DE DEPART",fmtDate(r.checkout)],
+      ["M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z","DUREE DU SEJOUR",n+" nuit"+(n>1?"s":"")],
+      ["M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z","NOMBRE DE PERSONNES",nbPersonnes+" adulte"+(nbPersonnes>1?"s":"")],
+      ["M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6","CHAMBRE","Ch. "+(room?.number||"—")+" — "+(room?.type||"")],
+    ].map(([p,lbl,val])=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f0e8d8;">
+        <div style="width:34px;height:34px;background:#f0e8d8;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b5872a" stroke-width="2" stroke-linecap="round"><path d="${p}"/></svg>
+        </div>
+        <div>
+          <p style="font-size:7.5px;letter-spacing:2px;color:#8a7040;text-transform:uppercase;margin:0 0 1px;">${lbl}</p>
+          <p style="font-size:13px;font-weight:700;color:#1a1208;margin:0;">${val}</p>
+        </div>
+      </div>`).join("");
+    const html=`<div style="background:#faf7f2;width:210mm;min-height:297mm;margin:0 auto;font-family:Helvetica,Arial,sans-serif;padding:0;box-sizing:border-box;">
+  <div style="text-align:center;padding:24px 30px 14px;background:#faf7f2;">
+    <img src="${LOGO}" style="height:65px;width:auto;margin-bottom:6px;" alt="Logo"/>
+    <p style="font-size:21px;font-weight:900;letter-spacing:6px;color:#1a1208;margin:0;">IMPAVID</p>
+    <p style="font-size:12px;font-weight:700;letter-spacing:3px;color:#1a1208;margin:2px 0;">HOTEL</p>
+    <p style="font-size:11px;color:#8a7040;font-style:italic;margin:2px 0;">Sejour Urbain Raffine</p>
+  </div>
+  <div style="padding:0 26px 20px;">
+    <div style="text-align:center;margin:8px 0 14px;">
+      <p style="font-size:16px;font-weight:900;letter-spacing:3px;color:#1a1208;margin:0;">VOUCHER DE RESERVATION</p>
+      <div style="height:1.5px;background:linear-gradient(to right,transparent,#b5872a,transparent);margin:8px 0 0;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:6px;">
+      <div><p style="font-size:7.5px;letter-spacing:2px;color:#8a7040;text-transform:uppercase;margin:0 0 2px;">Numero de Reservation</p><p style="font-size:14px;font-weight:700;color:#1a1208;margin:0;">${numRes}</p></div>
+      <div><p style="font-size:7.5px;letter-spacing:2px;color:#8a7040;text-transform:uppercase;margin:0 0 2px;">Code IATA/TIDS</p><p style="font-size:14px;font-weight:700;color:#1a1208;margin:0;">PC029090</p></div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <p style="font-size:7.5px;letter-spacing:2px;color:#8a7040;text-transform:uppercase;margin:0 0 2px;">Date de Reservation / Recue</p>
+      <p style="font-size:13px;font-weight:700;color:#1a1208;margin:0;">${dateRes}</p>
+    </div>
+    <div style="background:#f0e8d8;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:14px;margin-bottom:8px;">
+      <div style="width:38px;height:38px;background:#b5872a;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </div>
+      <div>
+        <p style="font-size:7.5px;letter-spacing:2px;color:#8a7040;text-transform:uppercase;margin:0 0 2px;">Nom du Client</p>
+        <p style="font-size:18px;font-weight:700;color:#1a1208;margin:0;">${r.guest}</p>
+      </div>
+    </div>
+    <div style="background:#faf7f2;border:1px solid #e8d8b8;border-radius:10px;padding:6px 14px;margin-bottom:8px;">${rows}</div>
+    <div style="background:#f0e8d8;border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:38px;height:38px;background:#b5872a;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6m0 0v6m0-6h4m-4 0H8"/></svg>
+        </div>
+        <div>
+          <p style="font-size:8px;letter-spacing:2px;color:#8a7040;text-transform:uppercase;margin:0 0 1px;">Montant Total</p>
+          <p style="font-size:20px;font-weight:900;color:#1a1208;margin:0;">${fmt(total)} DT</p>
+        </div>
+      </div>
+      ${avanceSection}
+    </div>
+    <p style="text-align:center;font-size:10px;color:#8a7040;font-style:italic;margin:8px 0;">Merci pour votre confiance.<br/>Nous sommes heureux de vous accueillir a l'<strong>IMPAVID HOTEL</strong>.</p>
+    <div style="border-top:1.5px solid #b5872a;margin-top:8px;padding-top:10px;display:flex;justify-content:space-between;align-items:flex-end;">
+      <div>
+        <p style="font-size:10px;color:#6a5530;margin:3px 0;">📍 Rue Jamel Abdelnacer, Gabes</p>
+        <p style="font-size:10px;color:#6a5530;margin:3px 0;">📞 75220856</p>
+        <p style="font-size:10px;color:#6a5530;margin:3px 0;">✉ impavidhotel@gmail.com</p>
+      </div>
+      <div style="width:75px;height:75px;border:2px solid #4a6fb5;border-radius:50%;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;opacity:0.7;">
+        <p style="font-size:7px;color:#4a6fb5;line-height:1.4;margin:0;">Tel/Fax:<br/><strong>75 278 525</strong><br/>Gabes</p>
+      </div>
+    </div>
+  </div>
+</div>`;
+    var w=window.open("","_blank","width=900,height=1200");
+    var css2="@page{size:A4 portrait;margin:0}body{margin:0;padding:0;background:#faf7f2;}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}";
+    w.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'/><style>"+css2+"</style></head><body>"+html+"<script>window.onload=function(){window.print();}<\/script></body></html>");
+    w.document.close();
+  }
+
+
+  function printEtatReservations(list){
+    var sourceLabel={direct:"Direct",booking:"Booking.com",expedia:"Expedia",agence:"Agence",autre:"Autre"};
+    var modeLabel={especes:"Especes",carte:"Carte",cheque:"Cheque",virement:"Virement"};
+    var fmt=function(v){return Number(v||0).toFixed(3);};
+    var totalNuits=0,totalMontant=0,totalPaye=0,totalReste=0;
+    var fmtD=function(d){return new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"});};
+    var rows=list.map(function(r){
+      var room=ROOMS.find(function(x){return x.id===r.roomId;});
+      var n=Math.max(1,Math.round((new Date(r.checkout)-new Date(r.checkin))/86400000));
+      var prixNuit=r.customPrice!==undefined?r.customPrice:(room?room.price:0)+(r.pension==="dp"?40:0);
+      var total=Math.round((prixNuit*n+(r.extraBed?30*n:0))*1000)/1000;
+      var avance=Number(r.avance||0);
+      var reste=Math.max(0,Math.round((total-avance)*1000)/1000);
+      var paye=r.paid?total:avance;
+      totalNuits+=n; totalMontant+=total; totalPaye+=paye; totalReste+=reste;
+      var numRes=String(r.numero||"").padStart(6,"0");
+      var nbP=(r.adults||1)+(r.children||0);
+      var resteColor=reste>0?"#c95050":"#2d7a4f";
+      return "<tr style='border-bottom:1px solid #f0e8d8;'>"+
+        "<td style='padding:5px 6px;font-size:9px;'>"+r.guest+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;text-align:center;'>"+numRes+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;text-align:center;'>"+fmtD(r.checkin)+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;text-align:center;'>"+fmtD(r.checkout)+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;text-align:center;'>"+n+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;text-align:center;'>"+nbP+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;'>"+(room?room.type:"—")+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;text-align:center;'>"+(room?room.number:"—")+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;text-align:right;'>"+fmt(prixNuit)+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;text-align:right;font-weight:700;'>"+fmt(total)+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;text-align:right;color:#2d7a4f;'>"+fmt(paye)+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;text-align:right;color:"+resteColor+";'>"+fmt(reste)+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;'>"+(modeLabel[r.modePaiement||"especes"]||"—")+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;'>"+(sourceLabel[r.source||"direct"]||"—")+"</td>"+
+        "<td style='padding:5px 6px;font-size:9px;color:#8a7040;'>"+(r.notes||"")+"</td>"+
+        "</tr>";
+    }).join("");
+    var today=new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
+    var headers=["Client","N Res.","Arrivee","Depart","Nuits","Pers.","Type","Ch.","Tarif/N","Total","Paye/Av.","Reste","Paiement","Source","Observations"];
+    var ths=headers.map(function(h){return "<th style='padding:6px 5px;text-align:left;font-size:8px;white-space:nowrap;'>"+h+"</th>";}).join("");
+    var html="<div style='font-family:Arial,sans-serif;padding:10mm 8mm;width:297mm;min-height:210mm;box-sizing:border-box;'>"+
+      "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #b5872a;padding-bottom:10px;'>"+
+        "<div><p style='font-size:18px;font-weight:900;letter-spacing:4px;color:#1a1208;margin:0;'>IMPAVID HOTEL</p>"+
+        "<p style='font-size:10px;color:#8a7040;margin:2px 0;'>Rue Jamel Abdelnacer, Gabes - 75220856</p></div>"+
+        "<div style='text-align:right;'>"+
+          "<p style='font-size:14px;font-weight:700;color:#b5872a;margin:0;'>ETAT DES RESERVATIONS</p>"+
+          "<p style='font-size:10px;color:#8a7040;margin:2px 0;'>Imprime le "+today+"</p>"+
+          "<p style='font-size:10px;color:#8a7040;margin:0;'>"+list.length+" reservation"+(list.length>1?"s":"")+"</p>"+
+        "</div>"+
+      "</div>"+
+      "<table style='width:100%;border-collapse:collapse;font-size:9px;'>"+
+        "<thead><tr style='background:#b5872a;color:#fff;'>"+ths+"</tr></thead>"+
+        "<tbody>"+rows+"</tbody>"+
+        "<tfoot><tr style='background:#f5ede0;font-weight:700;border-top:2px solid #b5872a;'>"+
+          "<td colspan='4' style='padding:7px 6px;font-size:9px;font-weight:700;'>TOTAUX</td>"+
+          "<td style='padding:7px 6px;font-size:9px;text-align:center;'>"+totalNuits+"</td>"+
+          "<td></td><td></td><td></td><td></td>"+
+          "<td style='padding:7px 6px;font-size:10px;text-align:right;color:#1a1208;'>"+fmt(totalMontant)+"</td>"+
+          "<td style='padding:7px 6px;font-size:10px;text-align:right;color:#2d7a4f;'>"+fmt(totalPaye)+"</td>"+
+          "<td style='padding:7px 6px;font-size:10px;text-align:right;color:#c95050;'>"+fmt(totalReste)+"</td>"+
+          "<td colspan='3'></td>"+
+        "</tr></tfoot>"+
+      "</table>"+
+      "<p style='text-align:center;font-size:8px;color:#8a7040;margin-top:14px;border-top:1px solid #e8d8b0;padding-top:8px;'>"+
+        "IMPAVID HOTEL - Rue Jamel Abdelnacer, Gabes - Tel: 75220856 - impavidhotel@gmail.com"+
+      "</p></div>";
+    var w=window.open("","_blank","width=1100,height=800");
+    w.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'/><style>@page{size:A4 landscape;margin:0}body{margin:0;padding:0}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>"+html+"<script>window.onload=function(){window.print();}<\/script></body></html>");
+    w.document.close();
+  }
+
+    // Fermeture intelligente — annule le numéro réservé si non sauvegardé
   async function closeModal(){
     if(modal){
       const type=modal.type;
@@ -154,7 +329,10 @@ function App({user,onLogout}){
   useEffect(()=>{
     if(user?.id){
       sb.from('profiles').select('role').eq('id',user.id).maybeSingle()
-        .then(({data})=>setUserRole(data?.role||'receptionniste'));
+        .then(({data,error})=>{
+          if(error) console.error('Role error:',error);
+          setUserRole(data?.role||'receptionniste'); // défaut réceptionniste si profil manquant
+        });
     }
   },[user]);
 
@@ -363,7 +541,8 @@ function App({user,onLogout}){
     const byDateTo=!filterDateTo||r.checkin<=filterDateTo;
     const byPaid=filterPaid==="all"||( filterPaid==="unpaid"&&!r.paid&&!["cancelled","blocked"].includes(r.status))||(filterPaid==="paid"&&r.paid);
     const byMode=filterModePaiement==="all"||(r.modePaiement||"especes")===filterModePaiement;
-    return ms&&byStatus&&byDateFrom&&byDateTo&&byPaid&&byMode;
+    const bySource=filterSource==="all"||(r.source||"direct")===filterSource;
+    return ms&&byStatus&&byDateFrom&&byDateTo&&byPaid&&byMode&&bySource;
   });
 
   const css=`
@@ -476,13 +655,11 @@ function App({user,onLogout}){
             ["archives","📁","Archives"],
             ["groupes","🏢","Groupes"],
             ["clients-societes","📋","Fichier Clients"],
-            ["rh","👥","RH & Salaires"],
+
             ["police","📋","Livre de Police"],
             ["contrats","🤝","Contrats"],
             ["charges","💸","Charges"],
-            ["menage","🧹","Ménage"],
-            ["linge","🧺","Linge"],
-            ["resources","👥","Ressources"],
+
           ].map(([v,icon,l])=>(
             <button key={v} className={"nav-btn "+(view===v?"active":"")} onClick={()=>setView(v)}>
               <span style={{fontSize:15,flexShrink:0}}>{icon}</span>
@@ -497,7 +674,7 @@ function App({user,onLogout}){
             {syncing?"Synchronisation...":"Connecté"}
           </span>
           <div style={{fontFamily:'"Jost",sans-serif',fontSize:10,color:"#8a7040",marginBottom:8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user?.email}</div>
-          {userRole==="gerant"&&(
+          {isGerant&&(
             <button onClick={()=>{setShowJournal(true);loadLogs();}} style={{width:"100%",background:"#f0f4ff",border:"1px solid #c0cfee",color:"#3a5fc8",borderRadius:6,padding:"7px 0",fontSize:11,fontFamily:'"Jost",sans-serif',fontWeight:600,cursor:"pointer",letterSpacing:.5,marginBottom:6}}>
               📋 Journal d'activité
             </button>
@@ -540,7 +717,7 @@ function App({user,onLogout}){
                 {label:"Chambres Occupées",value:occupiedRooms.length,total:"/20",color:"#1a4f8a",bg:"#d0e4f8"},
                 {label:"Chambres Libres",value:freeRooms.length,total:"/20",color:"#2d7a4f",bg:"#d4f0e0"},
                 {label:"En Attente",value:reservations.filter(r=>r.status==="pending").length,total:" résa",color:"#b07d1a",bg:"#fef3d0"},
-                ...(userRole==="gerant"?[{label:"Revenus payés",value:FMT(reservations.filter(r=>r.paid).reduce((a,r)=>a+getEffectivePrice(r),0)),total:"",color:"#c9952a",bg:"#fef3d0"}]:[]),
+                ...(isGerant?[{label:"Revenus payés",value:FMT(reservations.filter(r=>r.paid).reduce((a,r)=>a+getEffectivePrice(r),0)),total:"",color:"#c9952a",bg:"#fef3d0"}]:[]),
               ].map((s,i)=>(
                 <div key={i} className="stat-card" style={{borderTop:"3px solid "+s.color}}>
                   <p style={{fontFamily:'"Jost",sans-serif',fontSize:10,letterSpacing:2,color:"#8a7040",textTransform:"uppercase",marginBottom:8,fontWeight:600}}>{s.label}</p>
@@ -860,7 +1037,7 @@ function App({user,onLogout}){
           // Pour chaque chambre et chaque jour : trouver si occupée
           function getStatus(roomId, dateStr){
             const firstDayOfMonth=TODAY.slice(0,7)+"-01";
-            if(userRole!=="gerant"&&dateStr<firstDayOfMonth) return null;
+            if(["receptionniste","Receptionniste"].includes(userRole)&&dateStr<firstDayOfMonth) return null;
             const resDepart=reservations.find(r=>
               r.roomId===roomId&&
               ["confirmed","checkedin"].includes(r.status)&&
@@ -1117,7 +1294,10 @@ function App({user,onLogout}){
                   <p className="section-title">Réservations</p>
                   <p className="section-sub">{filtered.length} résultat{filtered.length>1?"s":""}</p>
                 </div>
-                <button className="btn-gold" onClick={openNew}>+ Nouvelle réservation</button>
+                <div style={{display:"flex",gap:8}}>
+                  {isGerant&&<button className="btn-outline" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>printEtatReservations(filtered)}>📋 État PDF</button>}
+                  <button className="btn-gold" onClick={openNew}>+ Nouvelle réservation</button>
+                </div>
               </div>
 
               {/* Barre de recherche + filtres */}
@@ -1154,6 +1334,17 @@ function App({user,onLogout}){
                   </select>
                   <div>
                     <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>🏦 Mode paiement</label>
+                    <select value={filterSource} onChange={e=>setFilterSource(e.target.value)} style={{width:"100%"}}>
+                        <option value="all">Toutes sources</option>
+                        <option value="direct">🏨 Direct</option>
+                        <option value="booking">🌐 Booking</option>
+                        <option value="expedia">✈️ Expedia</option>
+                        <option value="agence">🤝 Agence</option>
+                        <option value="autre">📋 Autre</option>
+                      </select>
+                    </div>
+                    <div className="form-group" style={{margin:0}}>
+                      <label style={{fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,display:"block",marginBottom:4}}>Mode paiement</label>
                     <select value={filterModePaiement} onChange={e=>setFilterModePaiement(e.target.value)} style={{width:"100%"}}>
                       <option value="all">Tous</option>
                       <option value="especes">💵 Espèces</option>
@@ -1197,7 +1388,7 @@ function App({user,onLogout}){
                       </div>
                     ))}
                   </div>
-                  {userRole==="gerant"&&<div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+                  {isGerant&&<div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
                     {[
                       {k:"CA Total",v:bilan.revenus.toFixed(3),icon:"💰",c:"#2a1e08"},
                       {k:"Encaissé",v:bilan.encaisse.toFixed(3),icon:"✅",c:"#2d7a4f"},
@@ -1210,7 +1401,7 @@ function App({user,onLogout}){
                       </div>
                     ))}
                   </div>}
-                  {bilan.revenus>0&&userRole==="gerant"&&(
+                  {bilan.revenus>0&&isGerant&&(
                     <div style={{marginTop:10,background:"rgba(255,255,255,0.5)",borderRadius:6,padding:"7px 12px"}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                         <span style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:color,fontWeight:600}}>
@@ -1264,8 +1455,15 @@ function App({user,onLogout}){
                         <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:"#c95050",fontWeight:600}}>✕ Annulée</p>
                       ):(
                         <>
-                          {userRole==="gerant"&&<p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:600,color:r.paid?"#2d7a4f":"#2a1e08"}}>{FMT(getEffectivePrice(r))}</p>}
-                          <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:r.paid?"#2d7a4f":"#c95050"}}>{r.paid?"✓ payé":"en attente"}</p>
+                          {isGerant&&<p style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:600,color:r.paid?"#2d7a4f":"#2a1e08"}}>{FMT(getEffectivePrice(r))}</p>}
+                          <p style={{fontFamily:'"Jost",sans-serif',fontSize:11,color:r.paid?"#2d7a4f":r.avance>0?"#c9952a":"#c95050"}}>
+                            {r.paid?"✓ payé":r.avance>0?"⟳ avance":"en attente"}
+                          </p>
+                          {r.avance>0&&!r.paid&&(
+                            <p style={{fontFamily:'"Jost",sans-serif',fontSize:10,color:"#8a7040"}}>
+                              Reste: {Math.max(0,(()=>{const rm=ROOMS.find(x=>x.id===r.roomId);const n=Math.max(1,Math.round((new Date(r.checkout)-new Date(r.checkin))/86400000));const p=r.customPrice!==undefined?r.customPrice:(rm?.price||0)*(1+(r.pension==="dp"?40/rm?.price||0:0));return p*n;})()-Number(r.avance||0)).toFixed(3)} TND
+                            </p>
+                          )}
                         </>
                       )}
                     </div>
@@ -1790,7 +1988,7 @@ function App({user,onLogout}){
                     <option value="">Sélectionner une chambre</option>
                     {[1,2,3,4].map(floor=>(
                       <optgroup key={floor} label={"── Étage "+floor}>
-                        {ROOMS.filter(r=>r.floor===floor).map(r=>{const occ=isOccForDates(r.id,reservations,form.checkin,form.checkout,form.id);return <option key={r.id} value={r.id} disabled={occ}>{r.number} — {r.type} ({r.price} TND/nuit){occ?" [Occupée ces dates]":""}</option>;})}
+                        {ROOMS.filter(r=>r.floor===floor).map(r=>{const occ=isOccForDates(r.id,reservations,form.checkin,form.checkout,form.id);return <option key={r.id} value={r.id} disabled={occ}>{r.number} — {r.type} ({r.price} TND/nuit){occ?" [Occupée ces dates)":""}</option>;})}
                       </optgroup>
                     ))}
                   </select>
@@ -1820,7 +2018,7 @@ function App({user,onLogout}){
                 <div className="form-grid">
                   <div className="form-group">
                     <label>Nationalité</label>
-                    <select value={["","Tunisienne","Algérienne","Marocaine","Libyenne","Française","Italienne","Allemande","Espagnole","Britannique","Belge","Suisse","Américaine"].includes(form.nationality||"")?form.nationality||"":" autre"} onChange={e=>{if(e.target.value!==" autre")setForm(f=>({...f,nationality:e.target.value}));else setForm(f=>({...f,nationality:""}));}}>
+                    <select value={["","Tunisienne","Algérienne","Marocaine","Libyenne","Française","Italienne","Allemande","Espagnole","Britannique","Belge","Suisse","Américaine","Australienne"].includes(form.nationality||"")?form.nationality||"":"__autre__"} onChange={e=>{if(e.target.value!=="__autre__")setForm(f=>({...f,nationality:e.target.value}));else setForm(f=>({...f,nationality:"__autre__"}));}}>
                       <option value="">— Choisir —</option>
                       <option>Tunisienne</option>
                       <option>Algérienne</option>
@@ -1837,8 +2035,8 @@ function App({user,onLogout}){
                       <option>Australienne</option>
                       <option value=" autre">✏️ Autre...</option>
                     </select>
-                    {!["","Tunisienne","Algérienne","Marocaine","Libyenne","Française","Italienne","Allemande","Espagnole","Britannique","Belge","Suisse","Américaine","Australienne"].includes(form.nationality||"")&&(
-                      <input value={form.nationality||""} onChange={e=>setForm(f=>({...f,nationality:e.target.value}))} placeholder="Saisir la nationalité..." style={{marginTop:6,fontSize:12,padding:"6px 10px",width:"100%"}}/>
+                    {(form.nationality==="__autre__"||(!["","Tunisienne","Algérienne","Marocaine","Libyenne","Française","Italienne","Allemande","Espagnole","Britannique","Belge","Suisse","Américaine","Australienne","__autre__"].includes(form.nationality||"")))&&(
+                      <input autoFocus value={form.nationality==="__autre__"?"":form.nationality||""} onChange={e=>setForm(f=>({...f,nationality:e.target.value}))} placeholder="Saisir la nationalité..." style={{marginTop:6,fontSize:12,padding:"6px 10px",width:"100%"}}/>
                     )}
                   </div>
                   <div className="form-group">
@@ -1860,7 +2058,24 @@ function App({user,onLogout}){
                       <option value="especes">💵 Espèces</option>
                       <option value="carte">💳 Carte bancaire</option>
                       <option value="cheque">📝 Chèque</option>
-                      <option value="virement">🏦 Virement</option>
+                      <option value="virement">🏦 Virement bancaire</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Avance reçue (TND)</label>
+                    <input type="number" min="0" step="0.001"
+                      value={form.avance||""}
+                      onChange={e=>setForm(f=>({...f,avance:e.target.value}))}
+                      placeholder="0.000"/>
+                  </div>
+                  <div className="form-group">
+                    <label>Source de réservation</label>
+                    <select value={form.source||"direct"} onChange={e=>setForm(f=>({...f,source:e.target.value}))}>
+                      <option value="direct">🏨 Direct</option>
+                      <option value="booking">🌐 Booking.com</option>
+                      <option value="expedia">✈️ Expedia</option>
+                      <option value="agence">🤝 Agence</option>
+                      <option value="autre">📋 Autre</option>
                     </select>
                   </div>
                 </div>
@@ -2303,12 +2518,24 @@ function App({user,onLogout}){
                     ].filter(Boolean).map(([l,v])=>(
                       <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontFamily:'"Jost",sans-serif',fontSize:12,color:"#6a5530"}}><span>{l}</span><span>{v}</span></div>
                     ))}
-                    <div style={{display:"flex",justifyContent:"space-between",borderTop:"1px solid #e8d8b0",paddingTop:10,marginTop:4}}>
-                      <span style={{fontFamily:'"Jost",sans-serif',fontSize:14,color:"#6a5530",fontWeight:600}}>Total TTC</span>
-                      <div style={{textAlign:"right"}}>
-                        <p style={{fontSize:22,fontWeight:600,color:"#2a1e08"}}>{totalTTC.toFixed(3)} TND</p>
-                        <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:r.paid?"#2d7a4f":"#c95050",fontWeight:600}}>{r.paid?"✓ Payé":"Non payé"}</p>
+                    <div style={{borderTop:"1px solid #e8d8b0",paddingTop:10,marginTop:4}}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                        <span style={{fontFamily:'"Jost",sans-serif',fontSize:14,color:"#6a5530",fontWeight:600}}>Total TTC</span>
+                        <span style={{fontSize:18,fontWeight:700,color:"#2a1e08"}}>{totalTTC.toFixed(3)} TND</span>
                       </div>
+                      {(r.avance>0)&&(
+                        <div style={{background:"#f0faf5",border:"1px solid #a0d8b8",borderRadius:8,padding:"8px 12px",marginTop:6}}>
+                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                            <span style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#2d7a4f"}}>✅ Avance reçue</span>
+                            <span style={{fontFamily:'"Jost",sans-serif',fontSize:12,fontWeight:700,color:"#2d7a4f"}}>{Number(r.avance||0).toFixed(3)} TND</span>
+                          </div>
+                          <div style={{display:"flex",justifyContent:"space-between"}}>
+                            <span style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#c95050"}}>⏳ Reste à payer</span>
+                            <span style={{fontFamily:'"Jost",sans-serif',fontSize:13,fontWeight:700,color:"#c95050"}}>{Math.max(0,totalTTC-Number(r.avance||0)).toFixed(3)} TND</span>
+                          </div>
+                        </div>
+                      )}
+                      <p style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:r.paid?"#2d7a4f":"#c95050",fontWeight:600,marginTop:6}}>{r.paid?"✓ Payé intégralement":"⏳ Non payé"}</p>
                     </div>
                   </div>
                 )}
@@ -2327,6 +2554,7 @@ function App({user,onLogout}){
                   {!["cancelled","blocked","checkedout"].includes(r.status)&&<button className="btn-outline" onClick={()=>{updateStatus(r.id,"cancelled");addLog("🚫 Réservation annulée",{client:r.guest,chambre:ROOMS.find(rm=>rm.id===r.roomId)?.number});setModal({type:"detail",data:{...r,status:"cancelled"}});}}>Annuler</button>}
                   {!r.paid&&r.status!=="blocked"&&<button className="btn-outline" style={{background:"#f0faf5",borderColor:"#a0d8b8",color:"#2d7a4f"}} onClick={()=>setPaiementModal({data:r,mode:"especes"})}>💰 Marquer payé</button>}
                   {!["blocked","cancelled"].includes(r.status)&&<button className="btn-outline" onClick={()=>openInvoice(r)}>Facture</button>}
+                  {!["blocked","cancelled"].includes(r.status)&&<button className="btn-outline" style={{background:"#fef9ee",borderColor:"#e8c060",color:"#8a5c10"}} onClick={()=>printVoucher(r)}>🎫 Voucher</button>}
                   {r.pension==="dp"&&["confirmed","checkedin"].includes(r.status)&&<button className="btn-outline" style={{background:"#fff8ee",borderColor:"#e8b84b",color:"#8a5c10"}} onClick={()=>setModal({type:"bonRestaurant",data:r})}>🍽 Bon Restaurant</button>}
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between"}}>
@@ -2617,7 +2845,7 @@ function App({user,onLogout}){
                   ):(
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <span style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#2a8a5a",fontWeight:700}}>✓ F-{modal.invNum}</span>
-                      {userRole==="gerant"&&(
+                      {isGerant&&(
                         <button className="btn-red" style={{fontSize:11,padding:"5px 12px"}} onClick={()=>{
                           setCancelModal({numero:'F-'+modal.invNum,onDone:()=>{setModal(m=>({...m,saved:false,invNum:undefined}));showToast('Facture annulée','error');}});
                         }}>✕ Annuler</button>
@@ -2795,7 +3023,7 @@ function App({user,onLogout}){
                     ):(
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
                         <span style={{fontFamily:'"Jost",sans-serif',fontSize:12,color:"#2a8a5a",fontWeight:700}}>✓ {di.devNum}</span>
-                        {userRole==="gerant"&&(
+                        {isGerant&&(
                           <button className="btn-red" style={{fontSize:11,padding:"5px 12px"}} onClick={()=>{
                             setCancelModal({numero:di.devNum,onDone:()=>{setDI(f=>({...f,saved:false}));showToast('Devis annulé','error');}});
                           }}>✕ Annuler</button>
