@@ -90,7 +90,7 @@ const STATUS = {
   blocked:{label:"Bloquée",color:"#6b35b8",bg:"#ead4f8"},
 };
 
-function toDb(f){return{guest:f.guest,email:f.email||"",phone:f.phone||"",room_id:parseInt(f.roomId),checkin:f.checkin,checkout:f.checkout,adults:parseInt(f.adults)||1,status:f.status,paid:f.paid||false,extra_bed:f.extraBed||false,baby_bed:f.babyBed||false,baby_bed_location:f.babyBedLocation||"",notes:f.notes||"",claim:f.claim||"",assigned_menage:f.assignedMenage||"",children:parseInt(f.children)||0,breakfast:f.breakfast||"non",pension:f.pension||"lpd",custom_price:f.customPrice!==undefined?f.customPrice:null,billing_type:f.billingType||null,remise:parseFloat(f.remise)||0,cin:f.cin||"",nationality:f.nationality||"",passport:f.passport||"",profession:f.profession||"",provenance:f.provenance||"",accompagnants:f.accompagnants||[],contrat_id:f.contratId||null,groupe_id:f.groupeId||null,bon_commande:f.bonCommande||null,date_naissance:f.dateNaissance||null,mode_paiement:f.modePaiement||'especes'};}
+function toDb(f){return{guest:f.guest,email:f.email||"",phone:f.phone||"",room_id:parseInt(f.roomId),checkin:f.checkin,checkout:f.checkout,adults:parseInt(f.adults)||1,status:f.status,paid:f.paid||false,extra_bed:f.extraBed||false,baby_bed:f.babyBed||false,baby_bed_location:f.babyBedLocation||"",notes:f.notes||"",claim:f.claim||"",assigned_menage:f.assignedMenage||"",children:parseInt(f.children)||0,breakfast:f.breakfast||"non",pension:f.pension||"lpd",custom_price:f.customPrice!==undefined?f.customPrice:null,billing_type:f.billingType||null,remise:parseFloat(f.remise)||0,cin:f.cin||"",nationality:f.nationality||"",passport:f.passport||"",profession:f.profession||"",provenance:f.provenance||"",accompagnants:f.accompagnants||[],contrat_id:f.contratId||null,groupe_id:f.groupeId||null,bon_commande:f.bonCommande||null,date_naissance:f.dateNaissance||null,mode_paiement:f.modePaiement||'especes',avance:parseFloat(f.avance)||0,source:f.source||'direct'};}
 function fromDb(r){return{id:r.id,guest:r.guest,email:r.email,phone:r.phone,roomId:r.room_id,checkin:r.checkin,checkout:r.checkout,adults:r.adults,status:r.status,paid:r.paid,extraBed:r.extra_bed,babyBed:r.baby_bed,babyBedLocation:r.baby_bed_location,notes:r.notes,claim:r.claim,assignedMenage:r.assigned_menage||"",children:r.children||0,breakfast:r.breakfast||"non",pension:r.pension||"lpd",customPrice:r.custom_price!=null?r.custom_price:undefined,billingType:r.billing_type||null,remise:r.remise||0,cin:r.cin||"",nationality:r.nationality||"",passport:r.passport||"",profession:r.profession||"",provenance:r.provenance||"",accompagnants:r.accompagnants||[],contratId:r.contrat_id||null,groupeId:r.groupe_id||null,bonCommande:r.bon_commande||null,dateNaissance:r.date_naissance||null,modePaiement:r.mode_paiement||'especes'};}function isOcc(roomId,reservations,excludeId=null){return reservations.some(r=>r.roomId===roomId&&r.id!==excludeId&&["confirmed","checkedin","pending","blocked"].includes(r.status)&&r.checkin<=getToday()&&r.checkout>getToday());}
 // Vérifie si une chambre est occupée pour des dates spécifiques (chevauchement)
 function isOccForDates(roomId,reservations,checkin,checkout,excludeId=null){
@@ -116,7 +116,7 @@ function SignatureBlock({showCachet=true,showRib=false}){
     <div style={{marginTop:28}}>
       {/* RIB bancaire */}
       {showRib&&(
-        <div style={{marginBottom:16,padding:"10px 14px",background:"#f5f0e8",border:"1px solid #e0d0b0",borderRadius:8,borderLeft:"3px solid #c9952a"}}>
+        <div style={{marginBottom:16,padding:"10px 0",borderTop:"1px solid #e0d0b0",borderBottom:"1px solid #e0d0b0"}}>
           <p style={{fontSize:10,fontWeight:700,color:"#8B6434",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>RIB</p>
           <p style={{fontSize:15,color:"#2c2416",fontFamily:"monospace",letterSpacing:2,fontWeight:700}}>{RIB}</p>
           <p style={{fontSize:8,color:"#8a7040",marginTop:2}}>Titulaire : Société Hedi pour les services touristiques — SHST</p>
@@ -132,7 +132,7 @@ function SignatureBlock({showCachet=true,showRib=false}){
             <img src={CACHET_IMG} alt="Cachet" style={{width:265,height:265,objectFit:"contain",mixBlendMode:"multiply"}}/>
           </div>
         ):(
-          <div style={{border:"1.5px dashed #c0a870",borderRadius:8,height:70,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:6,background:"#fdfbf7"}}>
+          <div style={{border:"1.5px dashed #c0a870",borderRadius:8,height:70,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:6}}>
             <p style={{fontSize:8,color:"#d0c090",fontStyle:"italic"}}>Cachet de l'établissement</p>
           </div>
         )}
