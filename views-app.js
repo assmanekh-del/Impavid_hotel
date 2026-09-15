@@ -66,7 +66,9 @@ function App({user,onLogout}){
   async function saveFacture(payload){
     addLog("🧾 Facture créée",{numero:payload.numero,client:payload.client,montant:payload.montant_ttc});
     // Ajouter mode_paiement si présent dans le form actuel
-    const payloadWithMode={...payload,mode_paiement:payload.mode_paiement||form?.modePaiement||"especes",avance:parseFloat(form?.avance||0)||0,source:form?.source||"direct"};
+    const isReservation = payload.checkin !== undefined || payload.checkout !== undefined || form?.checkin !== undefined;
+    const extra = isReservation ? {avance:parseFloat(form?.avance||0)||0, source:form?.source||"direct"} : {};
+    const payloadWithMode={...payload,mode_paiement:payload.mode_paiement||form?.modePaiement||"especes",...extra};
     try{
       const {error}=await sb.from('factures').insert([payloadWithMode]);
       if(error) throw error;
@@ -541,7 +543,7 @@ function App({user,onLogout}){
     const byDateTo=!filterDateTo||r.checkin<=filterDateTo;
     const byPaid=filterPaid==="all"||( filterPaid==="unpaid"&&!r.paid&&!["cancelled","blocked"].includes(r.status))||(filterPaid==="paid"&&r.paid);
     const byMode=filterModePaiement==="all"||(r.modePaiement||"especes")===filterModePaiement;
-    const bySource=filterSource==="all"||(r.source||"direct")===filterSource;
+    const bySource=filterSource==="all"||((r.source||"direct")===filterSource);
     return ms&&byStatus&&byDateFrom&&byDateTo&&byPaid&&byMode&&bySource;
   });
 
@@ -774,16 +776,14 @@ function App({user,onLogout}){
                 const YESTERDAY=new Date(now);
                 YESTERDAY.setDate(YESTERDAY.getDate()-1);
                 const YESTERDAY_STR=YESTERDAY.toISOString().split("T")[0];
-                const isPDJ=h>=6&&h<11;
-                // 6h-11h (service) : ceux qui ont dormi la nuit dernière
-                //   checkin < aujourd'hui ET checkout >= aujourd'hui
-                // après 11h (PDJ demain) : ceux qui dorment cette nuit
-                //   checkin <= aujourd'hui ET checkout > aujourd'hui
+                const isPDJ=h>=6&&h<12; // service matin jusqu'à 12h
+                // Avant 12h : clients qui ont dormi cette nuit (checkout >= aujourd'hui)
+                // Après 12h : clients qui dorment cette nuit (arrivés aujourd'hui ou avant, partent demain ou après)
                 const resPDJ=reservations.filter(r=>
                   ["confirmed","checkedin","checkedout"].includes(r.status)&&
-                  (isPDJ
-                    ? r.checkin<getToday()&&r.checkout>=getToday()
-                    : r.checkin<=getToday()&&r.checkout>getToday()
+                  (h<12
+                    ? r.checkin<getToday()&&r.checkout>=getToday()  // avant 12h : clients de la nuit passée
+                    : r.checkin<=getToday()&&r.checkout>getToday()  // après 12h : clients de la nuit à venir
                   )
                 );
                 const totalPersonnes=resPDJ.reduce((a,r)=>{
@@ -1333,7 +1333,7 @@ function App({user,onLogout}){
                     <option value="paid">✅ Payés</option>
                   </select>
                   <div>
-                    <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>🏦 Mode paiement</label>
+                    <label style={{display:"block",fontFamily:'"Jost",sans-serif',fontSize:10,fontWeight:700,color:"#8a7040",textTransform:"uppercase",letterSpacing:.8,marginBottom:5}}>🌐 Source réservation</label>
                     <select value={filterSource} onChange={e=>setFilterSource(e.target.value)} style={{width:"100%"}}>
                         <option value="all">Toutes sources</option>
                         <option value="direct">🏨 Direct</option>
