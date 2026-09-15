@@ -211,13 +211,7 @@ function App({user,onLogout}){
     </div>
     <p style="text-align:center;font-size:10px;color:#8a7040;font-style:italic;margin:8px 0;">Merci pour votre confiance.<br/>Nous sommes heureux de vous accueillir a l'<strong>IMPAVID HOTEL</strong>.</p>
     <!-- Signature block -->
-    <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:flex-end;padding:0 10px;">
-      <div style="text-align:center;">
-        <p style="font-size:8px;color:#8a7040;text-transform:uppercase;letter-spacing:1px;margin-bottom:30px;">Signature Client</p>
-        <div style="border-top:1.5px solid #c0a870;width:130px;padding-top:4px;">
-          <p style="font-size:8px;color:#a09080;">Signature</p>
-        </div>
-      </div>
+    <div style="margin-top:16px;display:flex;justify-content:flex-end;align-items:flex-end;padding:0 10px;">
       <div style="text-align:center;">
         <p style="font-size:8px;color:#8a7040;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Cachet &amp; Signature</p>
         <p style="font-size:7px;color:#a09080;font-style:italic;margin-bottom:2px;">Pour IMPAVID HOTEL — SHST</p>
